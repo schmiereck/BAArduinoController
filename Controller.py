@@ -1,24 +1,21 @@
 import tkinter as tk
 from tkinter import ttk
-import serial
-import struct
 import time
+import Sender
+import json
 
 #------------------------------------------------------------------------------
 # --- KONFIGURATION ---
-#SERIAL_PORT = '/dev/ttyACM0'  # Unter Windows z.B. 'COM3'
-SERIAL_PORT = 'COM3'  # Unter Windows z.B. 'COM3'
-BAUD_RATE = 115200
-START_MARKER = 0xAA
+# Konfiguration laden
+def load_config(file_path='config.json'):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print("Config-Datei nicht gefunden! Nutze Standardwerte.")
+        return None
 
-#------------------------------------------------------------------------------
-try:
-    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
-    time.sleep(2) # Warten auf Arduino Reset
-    print(f"Verbunden mit {SERIAL_PORT}")
-except Exception as e:
-    print(f"Fehler: {e}")
-    ser = None
+config = load_config()
 
 #------------------------------------------------------------------------------
 # Label aktualisieren
@@ -32,45 +29,24 @@ def update_label(label_obj, val, unitStr):
 #------------------------------------------------------------------------------
 last_send_time = 0
 
-def send_binary_packet(event=None):
+def send_binary_packet_slider(event=None):
     global last_send_time
 
-    if not ser: return
-
     current_time = time.time()
-    # Nur senden, wenn das Event "ButtonRelease" ist ODER 0.1s vergangen sind
+    # Nur senden, wenn das Event "ButtonRelease" ist ODER 0.1s vergangen sind.
     # Das verhindert das Fluten des Arduinos
     if event and event.type != '5': # '5' ist ButtonRelease in Tkinter
         if current_time - last_send_time < 0.1:
             return
     last_send_time = current_time
 
-    # Werte aus den Schiebereglern lesen
-    angles = [int(s.get()) for s in sliders]
-    duration = int(duration_slider.get())
+    """Sammelt UI-Werte und ruft den Sender auf."""
+    # Werte aus den Schiebereglern lesen und Winkel-Array erstellen
+    current_angles = [int(s.get()) for s in sliderArr]
+    # Einzellwert für Duration
+    current_duration = int(duration_slider.get())
 
-    # SICHERHEITS-CHECK: Nur senden, wenn alle 6 Winkel da sind
-    if len(angles) != 6:
-        return
-
-    # 1. Payload packen: 6x unsigned char (B), 1x unsigned short (H)
-    # '<' bedeutet Little Endian (wichtig für Arduino)
-    try:
-        payload = struct.pack('<6BH', *angles, duration)
-
-        # 2. Checksumme berechnen (XOR über alle 8 Bytes der Payload)
-        crc = 0
-        for byte in payload:
-            crc ^= byte
-
-        # 3. Komplettes Paket senden: Start-Marker + Payload + CRC
-        packet = struct.pack('B', START_MARKER) + payload + struct.pack('B', crc)
-        ser.write(packet)
-    except struct.error as e:
-        print(f"Pack-Fehler: {e}")
-
-    # Feedback in der Konsole
-    # print(f"Gesendet: {angles} | Dauer: {duration} ms | CRC: {hex(crc)}")
+    Sender.send_binary_packet(current_angles, current_duration)
 
 #------------------------------------------------------------------------------
 # --- GUI SETUP ---
@@ -79,15 +55,23 @@ root = tk.Tk()
 root.title("6-DOF Arm Binary Controller")
 root.geometry("400x500")
 
-sliders = []
-labels =   ["Base", "Schulter", "Ellenbogen", "Hand Gelenk", "Hand Dreh", "Greifer"]
-angleArr = [90,     0,          0,            160,            90,          45      ]
+sliderArr = []
+# Werte extrahieren (mit Fallback-Sicherheit)
+if config:
+    labelArr = config['servos']['labels']
+    angleArr = config['servos']['offsets'] # Deine Startwinkel
+    default_duration = config['servos']['default_duration']
+else:
+    # Fallback, falls die Datei fehlt
+    labelArr = ["Base", "Schulter", "Ellenbogen", "Hand Gelenk", "Hand Dreh", "Greifer"]
+    angleArr = [90,     0,          0,            160,            90,          45      ]
+    default_duration = 100
 
 #------------------------------------------------------------------------------
 # 1. Gelenk-Regler erstellen (OHNE command!)
 ttk.Label(root, text="Gelenk-Positionen", font=('Arial', 10, 'bold')).pack(pady=10)
 
-for pos, name in enumerate(labels):
+for pos, name in enumerate(labelArr):
     frame = ttk.Frame(root)
     frame.pack(pady=2, fill="x", padx=20)
     ttk.Label(frame, text=f"{name}:", width=15).pack(side="left")
@@ -109,7 +93,7 @@ for pos, name in enumerate(labels):
     s.set(angleArr[pos])
 
     s.pack(side="right", expand=True, fill="x")
-    sliders.append(s)
+    sliderArr.append(s)
 
 #------------------------------------------------------------------------------
 # 2. Dauer-Regler erstellen:
@@ -128,25 +112,25 @@ duration_slider = ttk.Scale(
     orient="horizontal",
     command=lambda v, l=dur_val_label: update_label(l, v, "ms") # Funktion Wert anzeigen
 )
-duration_slider.set(100)
+duration_slider.set(default_duration)
 duration_slider.pack(side="right", expand=True, fill="x")
 
 #------------------------------------------------------------------------------
 # 3. Jetzt erst die Callback-Funktion an alle Slider binden
 # (Jetzt sind alle Variablen definitiv definiert)
-for s in sliders:
-    #s.config(command=send_binary_packet)
+for s in sliderArr:
+    #s.config(command=send_binary_packet_slider)
     # Bindet das Senden an das Bewegen (mit Throttle) UND an das Loslassen (fix)
-    s.bind("<B1-Motion>", send_binary_packet) # Während des Ziehens (gebremst)
-    s.bind("<ButtonRelease-1>", send_binary_packet) # Beim Loslassen (immer)
+    s.bind("<B1-Motion>", send_binary_packet_slider) # Während des Ziehens (gebremst)
+    s.bind("<ButtonRelease-1>", send_binary_packet_slider) # Beim Loslassen (immer)
 
-#duration_slider.config(command=send_binary_packet)
-duration_slider.bind("<B1-Motion>", send_binary_packet) # Während des Ziehens (gebremst)
-duration_slider.bind("<ButtonRelease-1>", send_binary_packet) # Beim Loslassen (immer)
+#duration_slider.config(command=send_binary_packet_slider)
+duration_slider.bind("<B1-Motion>", send_binary_packet_slider) # Während des Ziehens (gebremst)
+duration_slider.bind("<ButtonRelease-1>", send_binary_packet_slider) # Beim Loslassen (immer)
 
 #------------------------------------------------------------------------------
 # Button zum manuellen Senden (falls die Echtzeit-Übertragung hakt)
-send_btn = ttk.Button(root, text="Manuell Senden", command=send_binary_packet)
+send_btn = ttk.Button(root, text="Manuell Senden", command=send_binary_packet_slider)
 send_btn.pack(pady=10)
 
 #------------------------------------------------------------------------------
@@ -156,16 +140,19 @@ status_label.pack(pady=5)
 
 #------------------------------------------------------------------------------
 def check_serial():
-    if ser and ser.in_waiting > 0:
-        # Wir lesen das Byte, das der Arduino als Bestätigung schickt
-        msg = ser.read()
+    msg = Sender.read_in_waiting()
+    if msg:
         status_label.config(text=f"Freie Puffer-Slots: {ord(msg)}")
+    #if ser and ser.in_waiting > 0:
+    #    # Wir lesen das Byte, das der Arduino als Bestätigung schickt
+    #    msg = ser.read()
+    #    status_label.config(text=f"Freie Puffer-Slots: {ord(msg)}")
     root.after(50, check_serial) # Alle 50ms prüfen
 
 #------------------------------------------------------------------------------
 root.after(50, check_serial)
 root.mainloop()
 
-if ser: ser.close()
+Sender.close_sender()
 
 #------------------------------------------------------------------------------

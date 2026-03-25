@@ -1,0 +1,7 @@
+{
+  "servos": {
+    "labels": ["Base", "Schulter", "Ellenbogen", "Hand Gelenk", "Hand Dreh", "Greifer"],
+    "offsets": [90,     0,          0,            160,            90,          45     ],
+    "default_duration": 100
+  }
+}

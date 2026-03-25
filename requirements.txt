@@ -9,3 +9,4 @@
 # sudo usermod -a -G dialout $USER
 # python Controller.py
 pyserial
+python-dotenv
