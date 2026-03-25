@@ -141,11 +141,8 @@ status_label.pack(pady=5)
 #------------------------------------------------------------------------------
 def check_serial():
     # Wir lesen das Byte, das der Arduino als Bestätigung schickt
-    msg = Sender.read_in_waiting()
-    if msg:
-        # msg[0] gibt dir direkt den Zahlenwert, falls msg ein bytes-Objekt ist.
-        # Ansonsten (z.B. bei Python 2) musst du ord() verwenden.
-        slots = msg[0] if isinstance(msg, bytes) else ord(msg)
+    slots = Sender.read_in_waiting()
+    if slots is not None:
         status_label.config(text=f"Freie Puffer-Slots: {slots}")
 
     root.after(50, check_serial) # Alle 50ms prüfen
