@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse
 from control_msgs.action import FollowJointTrajectory
-import Sender
+from . import Sender
 import time
 
 # Ersetze <ros-distro> durch deine Version, z.B. humble

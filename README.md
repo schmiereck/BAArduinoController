@@ -43,6 +43,9 @@ git clone https://github.com/schmiereck/BAArduinoController.git
 sudo apt install python3-rosdep2
 sudo rosdep init        # nur einmal nötig, schlägt fehl wenn schon gemacht – ignorieren
 rosdep update
+pip3 install python-dotenv --break-system-packages
+# oder
+sudo apt install python3-dotenv python3-serial
 ```
 1. **Abhängigkeiten installieren:**  
    Gehe in deinen Workspace-Root (dev_ws) und lass rosdep die Arbeit machen:
