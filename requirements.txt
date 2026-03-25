@@ -1,0 +1,11 @@
+# Raspberry Pi (Linux):
+# venv:
+# sudo apt-get install python3-venv -y
+# tkinter & ttk:
+# sudo apt-get install python3-tk
+# source venv/bin/activate
+#
+# pip install -r requirements.txt
+# sudo usermod -a -G dialout $USER
+# python Controller.py
+pyserial
