@@ -33,10 +33,11 @@ tkinter & ttk:
 ```sudo usermod -a -G dialout $USER```  
 ```python GUIController.py```  
 
-## ROS2
-### Wie du es baust und startest
+## ROS2 BAArduinoController
+### Raspberry Pi
+Wie du es baust und startest  
 1. **Abhängigkeiten installieren:**  
-   Gehe in deinen Workspace-Root (dev_ws) und lass rosdep die Arbeit machen:
+   Gehe in deinen Workspace-Root (dev_ws) und lass rosdep die Arbeit machen:  
    ```rosdep install -i --from-path src --rosdistro humble -y```
 2. **Bauen:**  
    ```colcon build --packages-select my_robot_arm```
