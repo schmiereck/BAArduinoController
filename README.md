@@ -36,12 +36,22 @@ tkinter & ttk:
 ## ROS2 BAArduinoController
 ### Raspberry Pi
 Wie du es baust und startest  
+```
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src
+git clone https://github.com/schmiereck/BAArduinoController.git
+sudo apt install python3-rosdep2
+sudo rosdep init        # nur einmal nötig, schlägt fehl wenn schon gemacht – ignorieren
+rosdep update
+```
 1. **Abhängigkeiten installieren:**  
-   Gehe in deinen Workspace-Root (dev_ws) und lass rosdep die Arbeit machen:  
+   Gehe in deinen Workspace-Root (dev_ws) und lass rosdep die Arbeit machen:
+   ```cd ~/ros2_ws```  
+   ```sudo apt-get update```  
    ```rosdep install -i --from-path src --rosdistro humble -y```
-2. **Bauen:**  
+3. **Bauen:**  
    ```colcon build --packages-select my_robot_arm```
-3. **Sourcen:**  
+4. **Sourcen:**  
    ```source install/setup.bash```
 3. **Ausführen:**  
    ```ros2 launch BAArduinoController pi_bridge.launch.py```
