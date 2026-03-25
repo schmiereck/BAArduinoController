@@ -60,12 +60,22 @@ def send_binary_packet(angles, duration):
 
 #------------------------------------------------------------------------------
 def read_in_waiting():
+    """
+    Liest verfügbare Bestätigungs-Bytes vom Arduino.
+    Gibt den Zahlenwert (int) des letzten Bytes zurück oder None.
+    """
     if ser and ser.in_waiting > 0:
-        # Wir lesen das Byte, das der Arduino als Bestätigung schickt
-        msg = ser.read()
-    else:
-        msg = None
-    return msg
+        try:
+            # Wir lesen alle verfügbaren Bytes, uns interessiert aber nur das aktuellste
+            # Das leert auch den Puffer, falls der PC mal kurz hing.
+            data = ser.read(ser.in_waiting)
+            # In Python 3 liefert ser.read() ein bytes-Objekt.
+            # Der Zugriff auf den Index [ -1 ] gibt uns direkt den Integer-Wert.
+            return data[-1]
+        except Exception as e:
+            print(f"Read-Fehler: {e}")
+            return None
+    return None
 
 #------------------------------------------------------------------------------
 def close_sender():
