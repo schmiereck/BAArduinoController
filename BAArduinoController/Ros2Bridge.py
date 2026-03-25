@@ -34,85 +34,85 @@ class Ros2Bridge(Node):
         Sender.send_flush()
         return CancelResponse.ACCEPT
 
-async def execute_callback(self, goal_handle):
-    """Verarbeitet die Trajektorie von MoveIt."""
-    trajectory = goal_handle.request.trajectory
-    joint_names = trajectory.joint_names
-    points = trajectory.points
+    async def execute_callback(self, goal_handle):
+        """Verarbeitet die Trajektorie von MoveIt."""
+        trajectory = goal_handle.request.trajectory
+        joint_names = trajectory.joint_names
+        points = trajectory.points
 
-    self.get_logger().info(f'Empfange Trajektorie mit {len(points)} Punkten.')
+        self.get_logger().info(f'Empfange Trajektorie mit {len(points)} Punkten.')
 
-    # 1. Mapping erstellen: Welcher Name liegt an welchem Index im ROS-Array?
-    # Beispiel: {'joint_0': 0, 'joint_1': 1, ...}
-    name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
+        # 1. Mapping erstellen: Welcher Name liegt an welchem Index im ROS-Array?
+        # Beispiel: {'joint_0': 0, 'joint_1': 1, ...}
+        name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
 
-    # Die erwarteten Namen (müssen exakt mit der URDF übereinstimmen).
-    expected_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
+        # Die erwarteten Namen (müssen exakt mit der URDF übereinstimmen).
+        expected_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
 
-    for i, point in enumerate(points):
-        # Prüfen, ob die Action abgebrochen wurde.
-        if goal_handle.is_cancel_requested:
-            goal_handle.canceled()
-            return FollowJointTrajectory.Result()
+        for i, point in enumerate(points):
+            # Prüfen, ob die Action abgebrochen wurde.
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                return FollowJointTrajectory.Result()
 
-        # 2. Winkel in der richtigen Reihenfolge (0-5) für den Arduino sammeln.
-        angles_deg = []
-        for servo_idx, joint_name in enumerate(expected_joints):
-            if joint_name in name_to_ros_idx:
-                ros_idx = name_to_ros_idx[joint_name]
-                rad = point.positions[ros_idx]
+            # 2. Winkel in der richtigen Reihenfolge (0-5) für den Arduino sammeln.
+            angles_deg = []
+            for servo_idx, joint_name in enumerate(expected_joints):
+                if joint_name in name_to_ros_idx:
+                    ros_idx = name_to_ros_idx[joint_name]
+                    rad = point.positions[ros_idx]
 
-                # Umrechnung mit Offsets
-                deg = self.map_ros_to_servo(servo_idx, rad)
-                angles_deg.append(deg)
+                    # Umrechnung mit Offsets
+                    deg = self.map_ros_to_servo(servo_idx, rad)
+                    angles_deg.append(deg)
+                else:
+                    # Fallback falls ein Gelenk fehlt (sollte nicht passieren).
+                    self.get_logger().error(f'Gelenk {joint_name} nicht in Trajektorie!')
+                    angles_deg.append(90)
+
+                    # Zeitdauer zum nächsten Punkt berechnen
+            if i == 0:
+                duration_ms = 200 # Erster Punkt Puffer
             else:
-                # Fallback falls ein Gelenk fehlt (sollte nicht passieren).
-                self.get_logger().error(f'Gelenk {joint_name} nicht in Trajektorie!')
-                angles_deg.append(90)
+                prev_point = points[i-1]
+                diff = (point.time_from_start.sec - prev_point.time_from_start.sec) + \
+                    (point.time_from_start.nanosec - prev_point.time_from_start.nanosec) * 1e-9
+                duration_ms = int(diff * 1000)
 
-                # Zeitdauer zum nächsten Punkt berechnen
-        if i == 0:
-            duration_ms = 200 # Erster Punkt Puffer
-        else:
-            prev_point = points[i-1]
-            diff = (point.time_from_start.sec - prev_point.time_from_start.sec) + \
-                   (point.time_from_start.nanosec - prev_point.time_from_start.nanosec) * 1e-9
-            duration_ms = int(diff * 1000)
+                # Sicherheits-Minimum für den Arduino
+                duration_ms = max(20, duration_ms)
 
-            # Sicherheits-Minimum für den Arduino
-            duration_ms = max(20, duration_ms)
+            # An Arduino senden
+            Sender.send_binary_packet(angles_deg, duration_ms)
 
-        # An Arduino senden
-        Sender.send_binary_packet(angles_deg, duration_ms)
+            # Kurze Pause, um den Puffer am Arduino nicht zu überrennen.
+            while True:
+                free_slots = Sender.read_in_waiting()
+                # Wir warten nur, wenn wir wirklich wissen, dass der Puffer voll ist (slots <= 1)
+                if free_slots is None or free_slots > 1:
+                    break
+                time.sleep(0.01)
 
-        # Kurze Pause, um den Puffer am Arduino nicht zu überrennen.
-        while True:
-            free_slots = Sender.read_in_waiting()
-            # Wir warten nur, wenn wir wirklich wissen, dass der Puffer voll ist (slots <= 1)
-            if free_slots is None or free_slots > 1:
-                break
-            time.sleep(0.01)
+        goal_handle.succeed()
+        result = FollowJointTrajectory.Result()
+        self.get_logger().info('Trajektorie erfolgreich ausgeführt.')
+        return result
 
-    goal_handle.succeed()
-    result = FollowJointTrajectory.Result()
-    self.get_logger().info('Trajektorie erfolgreich ausgeführt.')
-    return result
+    def map_ros_to_servo(self, joint_index, angle_rad):
+        """Wandelt ROS-Radianten (relativ) in Arduino-Grade (absolut) um."""
+        # Offsets aus deiner Konfiguration: [Base, Schulter, Ellenbogen, Hand G, Hand D, Greifer]
+        offsets = [90, 0, 0, 180, 90, 45]
 
-def map_ros_to_servo(self, joint_index, angle_rad):
-    """Wandelt ROS-Radianten (relativ) in Arduino-Grade (absolut) um."""
-    # Offsets aus deiner Konfiguration: [Base, Schulter, Ellenbogen, Hand G, Hand D, Greifer]
-    offsets = [90, 0, 0, 180, 90, 45]
+        # Radianten in Grad umrechnen (1 rad ≈ 57.2958°)
+        angle_deg = angle_rad * 57.2958
 
-    # Radianten in Grad umrechnen (1 rad ≈ 57.2958°)
-    angle_deg = angle_rad * 57.2958
+        # Berechnung basierend auf der Ruhestellung.
+        # Joint 3 (Hand Gelenk) hat Offset 180 und klappt nach 'unten' (negative Radianten).
+        # Wenn MoveIt -1.57 rad (90°) sendet -> 180 + (-90) = 90° am Servo. Passt!
+        servo_angle = offsets[joint_index] + angle_deg
 
-    # Berechnung basierend auf der Ruhestellung.
-    # Joint 3 (Hand Gelenk) hat Offset 180 und klappt nach 'unten' (negative Radianten).
-    # Wenn MoveIt -1.57 rad (90°) sendet -> 180 + (-90) = 90° am Servo. Passt!
-    servo_angle = offsets[joint_index] + angle_deg
-
-    # Sicherstellen, dass wir innerhalb der 0-180 Grad Hardware-Limits bleiben
-    return int(max(0, min(180, servo_angle)))
+        # Sicherstellen, dass wir innerhalb der 0-180 Grad Hardware-Limits bleiben
+        return int(max(0, min(180, servo_angle)))
 
 def main(args=None):
     rclpy.init(args=args)
