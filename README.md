@@ -50,9 +50,10 @@ rosdep update
    ```sudo apt-get update```  
    ```rosdep install -i --from-path src --rosdistro humble -y```
 3. **Bauen:**  
-   ```colcon build --packages-select my_robot_arm```
+   ```cd ~/ros2_ws```  
+   ```colcon build --packages-select BAArduinoController```
 4. **Sourcen:**  
-   ```source install/setup.bash```
+   ```source ~/ros2_ws/install/setup.bash```
 3. **Ausführen:**  
    ```ros2 launch BAArduinoController pi_bridge.launch.py```
 
