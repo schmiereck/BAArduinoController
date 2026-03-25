@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 #------------------------------------------------------------------------------
 # --- KONFIGURATION ---
-# Lädt die Variablen aus der .env Datei in das Betriebssystem-Environment
+# Lädt die Variablen aus der .env Datei in das Betriebssystem-Environment.
 load_dotenv()
 
 # Zugriff über os.getenv (mit Default-Werten als Fallback)
