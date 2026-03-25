@@ -1,9 +1,11 @@
 import tkinter as tk
 from tkinter import ttk
 import time
-import Sender
 import json
 import threading # Neu: Für die flüssige Homing-Sequenz ohne GUI-Freeze
+
+from BAArduinoController import Sender
+
 
 #------------------------------------------------------------------------------
 # --- KONFIGURATION ---

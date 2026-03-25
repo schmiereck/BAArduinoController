@@ -7,6 +7,6 @@
 #
 # pip install -r requirements.txt
 # sudo usermod -a -G dialout $USER
-# python Controller.py
+# python GUIController.py
 pyserial
 python-dotenv
