@@ -3,6 +3,7 @@ from tkinter import ttk
 import time
 import Sender
 import json
+import threading # Neu: Für die flüssige Homing-Sequenz ohne GUI-Freeze
 
 #------------------------------------------------------------------------------
 # --- KONFIGURATION ---
@@ -53,27 +54,42 @@ def send_binary_packet_slider(event=None):
     Sender.send_binary_packet(current_angles, current_duration)
 
 #------------------------------------------------------------------------------
-def go_home():
-    """Fährt die Servos in der gewünschten Reihenfolge (1, 2, 3, 4, 0, 5) in Parkposition."""
-    # Reihenfolge laut Vorgabe
+def go_home_thread():
+    """Führt die Homing-Sequenz in einem eigenen Thread aus, um die GUI nicht zu blockieren."""
+    # Reihenfolge laut Vorgabe: 1, 2, 3, 4, 0, 5
     sequence = [1, 2, 3, 4, 0, 5]
 
-    # Geschwindigkeit für Homing (etwas langsamer für Sicherheit)
-    home_duration = 1000
-    duration_slider.set(home_duration)
+    # Geschwindigkeit definieren: Wie viele ms pro Grad Weg?
+    # Ein höherer Wert bedeutet eine langsamere Bewegung.
+    MS_PER_DEGREE = 40
 
     for idx in sequence:
-        # Zielwinkel aus der Config (Offsets) holen
-        home_angle = angleArr[idx]
-        # Slider in der GUI aktualisieren (das triggert update_label)
-        sliderArr[idx].set(home_angle)
+        current_angle = int(sliderArr[idx].get())
+        target_angle = angleArr[idx]
 
-        # Paket senden (da go_home kein Event ist, ignoriert es die Checkbox-Sperre)
-        send_binary_packet_slider()
+        # Weg berechnen
+        distance = abs(target_angle - current_angle)
 
-        # Kurze Pause, damit der Arduino den Punkt verarbeitet, bevor der nächste kommt
-        # So entsteht die nacheinander ablaufende Bewegung
-        time.sleep(0.3)
+        if distance > 0:
+            # Individuelle Dauer für diesen Schritt berechnen
+            # Mindestdauer von 200ms, damit es nicht zu abrupt ist
+            step_duration = max(200, distance * MS_PER_DEGREE)
+
+            # 1. Slider in der GUI aktualisieren
+            sliderArr[idx].set(target_angle)
+
+            # 2. Aktuelle Gesamt-Konfiguration (mit dem neuen Winkel) senden
+            # Wir lesen hier alle Slider aus, damit die anderen stabil bleiben
+            current_angles = [int(s.get()) for s in sliderArr]
+            Sender.send_binary_packet(current_angles, int(step_duration))
+
+            # 3. Warten, bis dieser Servo fertig ist, bevor der nächste startet
+            # Wir addieren 0.1s Puffer für die mechanische Trägheit
+            time.sleep((step_duration / 1000.0) + 0.1)
+
+def start_homing():
+    """Startet den Homing-Thread."""
+    threading.Thread(target=go_home_thread, daemon=True).start()
 
 #------------------------------------------------------------------------------
 # --- GUI SETUP ---
@@ -91,7 +107,7 @@ if config:
 else:
     # Fallback, falls die Datei fehlt
     labelArr = ["Base", "Schulter", "Ellenbogen", "Hand Gelenk", "Hand Dreh", "Greifer"]
-    angleArr = [90,     0,          0,            160,            90,          45      ]
+    angleArr = [90,     0,          0,            180,            90,          45      ]
     default_duration = 100
 
 #------------------------------------------------------------------------------
@@ -125,7 +141,7 @@ for pos, name in enumerate(labelArr):
 #------------------------------------------------------------------------------
 # 2. Dauer-Regler erstellen:
 ttk.Separator(root, orient='horizontal').pack(fill='x', pady=15)
-ttk.Label(root, text="Geschwindigkeit", font=('Arial', 10, 'bold')).pack(pady=5)
+ttk.Label(root, text="Geschwindigkeit (Manuell)", font=('Arial', 10, 'bold')).pack(pady=5)
 dur_frame = ttk.Frame(root)
 dur_frame.pack(pady=5, fill="x", padx=20)
 ttk.Label(dur_frame, text="Dauer (ms):", width=15).pack(side="left")
@@ -167,8 +183,8 @@ chk_manual.pack(pady=5)
 send_btn = ttk.Button(root, text="Aktuelle Position senden", command=send_binary_packet_slider)
 send_btn.pack(pady=5)
 
-# Home Button
-home_btn = ttk.Button(root, text="Parkposition (Homing)", command=go_home)
+# Home Button (ruft jetzt die Thread-Funktion auf)
+home_btn = ttk.Button(root, text="Parkposition (Homing)", command=start_homing)
 home_btn.pack(pady=5)
 
 #------------------------------------------------------------------------------
