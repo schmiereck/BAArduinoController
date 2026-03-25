@@ -32,6 +32,10 @@ last_send_time = 0
 def send_binary_packet_slider(event=None):
     global last_send_time
 
+    # Falls "Manuell Senden" aktiv ist und ein Slider-Event (Ziehen/Klicken) reinkommt: Ignorieren
+    if event and manual_mode_var.get():
+        return
+
     current_time = time.time()
     # Nur senden, wenn das Event "ButtonRelease" ist ODER 0.1s vergangen sind.
     # Das verhindert das Fluten des Arduinos
@@ -49,11 +53,34 @@ def send_binary_packet_slider(event=None):
     Sender.send_binary_packet(current_angles, current_duration)
 
 #------------------------------------------------------------------------------
+def go_home():
+    """Fährt die Servos in der gewünschten Reihenfolge (1, 2, 3, 4, 0, 5) in Parkposition."""
+    # Reihenfolge laut Vorgabe
+    sequence = [1, 2, 3, 4, 0, 5]
+
+    # Geschwindigkeit für Homing (etwas langsamer für Sicherheit)
+    home_duration = 1000
+    duration_slider.set(home_duration)
+
+    for idx in sequence:
+        # Zielwinkel aus der Config (Offsets) holen
+        home_angle = angleArr[idx]
+        # Slider in der GUI aktualisieren (das triggert update_label)
+        sliderArr[idx].set(home_angle)
+
+        # Paket senden (da go_home kein Event ist, ignoriert es die Checkbox-Sperre)
+        send_binary_packet_slider()
+
+        # Kurze Pause, damit der Arduino den Punkt verarbeitet, bevor der nächste kommt
+        # So entsteht die nacheinander ablaufende Bewegung
+        time.sleep(0.3)
+
+#------------------------------------------------------------------------------
 # --- GUI SETUP ---
 #------------------------------------------------------------------------------
 root = tk.Tk()
 root.title("6-DOF Arm Binary Controller")
-root.geometry("400x500")
+root.geometry("400x650") # Höhe leicht angepasst für neue Buttons
 
 sliderArr = []
 # Werte extrahieren (mit Fallback-Sicherheit)
@@ -129,14 +156,25 @@ duration_slider.bind("<B1-Motion>", send_binary_packet_slider) # Während des Zi
 duration_slider.bind("<ButtonRelease-1>", send_binary_packet_slider) # Beim Loslassen (immer)
 
 #------------------------------------------------------------------------------
+# 4. Steuerung & Modus
+ttk.Separator(root, orient='horizontal').pack(fill='x', pady=15)
+
+manual_mode_var = tk.BooleanVar(value=False)
+chk_manual = ttk.Checkbutton(root, text="Manuelle Übertragung (Echtzeit aus)", variable=manual_mode_var)
+chk_manual.pack(pady=5)
+
 # Button zum manuellen Senden (falls die Echtzeit-Übertragung hakt)
-send_btn = ttk.Button(root, text="Manuell Senden", command=send_binary_packet_slider)
-send_btn.pack(pady=10)
+send_btn = ttk.Button(root, text="Aktuelle Position senden", command=send_binary_packet_slider)
+send_btn.pack(pady=5)
+
+# Home Button
+home_btn = ttk.Button(root, text="Parkposition (Homing)", command=go_home)
+home_btn.pack(pady=5)
 
 #------------------------------------------------------------------------------
 # Rückmeldungen vom Arduino anzeigen (z.B. freie Puffer-Slots)
 status_label = ttk.Label(root, text="Warte auf Arduino...")
-status_label.pack(pady=5)
+status_label.pack(pady=10)
 
 #------------------------------------------------------------------------------
 def check_serial():
