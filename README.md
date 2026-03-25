@@ -50,9 +50,25 @@ tkinter & ttk:
 Dann musst du nicht nach jeder kleinen Änderung im Python-Skript neu bauen!
 
 ### ROS2-PC
-3. **Ausführen:**  
+1. **Setup Assistant starten:**  
 ```ros2 launch moveit_setup_assistant setup_assistant.launch.py```.  
-
+   1. Wichtige Schritte im Assistant:
+      * Create New MoveIt Configuration Package: Wähle deine bracket_arm.urdf aus.
+      * Self-Collisions: Klicke auf "Generate Collision Matrix".
+      * Virtual Joints: (Meistens nicht nötig, es sei denn, der Roboter fährt auf Schienen).
+      * Planning Groups: Erstelle eine Gruppe "arm". Füge alle Gelenke von joint_0 bis joint_4 hinzu. Wähle als Solver "kdl_kinematics_plugin".
+      * Robot Poses: Erstelle eine Pose "Home" mit deinen Standard-Winkeln.
+      * Author Information: Deinen Namen eintragen.
+      * Configuration Files: Erstelle ein neues Verzeichnis (z. B. bracket_arm_moveit_config) und lass den Assistant die Dateien generieren.
+2. Launch-Skript für den PC
+      * Sobald der Assistant fertig ist, hat er dir bereits fertige Launch-Dateien erstellt! Du findest sie im neuen Ordner unter launch/. Eine typische Datei dort heißt demo.launch.py.
+      * Diese Datei macht auf deinem PC folgendes:
+      * Move Group Node: Das Hauptprogramm für die Pfadplanung.
+      * RViz2: Das Fenster, in dem du den Arm mit der Maus bewegen kannst.
+      * Controller Manager: Er verbindet MoveIt mit deiner ROS2Bridge.py auf dem Raspberry Pi.
+3. Verbindung zwischen PC und Pi ("DDS"-Protokoll)
+      * export ROS_DOMAIN_ID=42  
+        (Am besten in die .bashrc beider Geräte schreiben).
 
 ### Movelt
 Base bis Schulter: 82 mm
