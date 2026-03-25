@@ -54,6 +54,13 @@ def send_binary_packet_slider(event=None):
     Sender.send_binary_packet(current_angles, current_duration)
 
 #------------------------------------------------------------------------------
+def stop_action():
+    """Bricht alle laufenden Bewegungen im Arduino sofort ab."""
+    Sender.send_flush()
+    # Optional: Statusmeldung aktualisieren
+    status_label.config(text="STOP gesendet! Puffer geleert.")
+
+#------------------------------------------------------------------------------
 def go_home_thread():
     """Führt die Homing-Sequenz in einem eigenen Thread aus, um die GUI nicht zu blockieren."""
     # Reihenfolge laut Vorgabe: 1, 2, 3, 4, 0, 5
@@ -96,7 +103,7 @@ def start_homing():
 #------------------------------------------------------------------------------
 root = tk.Tk()
 root.title("6-DOF Arm Binary Controller")
-root.geometry("400x650") # Höhe leicht angepasst für neue Buttons
+root.geometry("420x560") # Höhe erhöht für neue Steuerelemente
 
 sliderArr = []
 # Werte extrahieren (mit Fallback-Sicherheit)
@@ -186,6 +193,19 @@ send_btn.pack(pady=5)
 # Home Button (ruft jetzt die Thread-Funktion auf)
 home_btn = ttk.Button(root, text="Parkposition (Homing)", command=start_homing)
 home_btn.pack(pady=5)
+
+# STOP / Not-Aus Button (klassischer tk.Button für rote Hintergrundfarbe)
+stop_btn = tk.Button(
+    root,
+    text="!!! NOT-AUS / STOP !!!",
+    command=stop_action,
+    bg="red",
+    fg="white",
+    font=('Arial', 10, 'bold'),
+    relief="raised",
+    pady=5
+)
+stop_btn.pack(pady=10, fill="x", padx=40)
 
 #------------------------------------------------------------------------------
 # Rückmeldungen vom Arduino anzeigen (z.B. freie Puffer-Slots)
