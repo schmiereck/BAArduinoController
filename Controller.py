@@ -59,7 +59,7 @@ def go_home_thread():
     # Reihenfolge laut Vorgabe: 1, 2, 3, 4, 0, 5
     sequence = [1, 2, 3, 4, 0, 5]
 
-    # Geschwindigkeit definieren: Wie viele ms pro Grad Weg?
+    # Geschwindigkeit definieren: wie viele ms pro Grad Weg?
     # Ein höherer Wert bedeutet eine langsamere Bewegung.
     MS_PER_DEGREE = 40
 
@@ -78,12 +78,12 @@ def go_home_thread():
             # 1. Slider in der GUI aktualisieren
             sliderArr[idx].set(target_angle)
 
-            # 2. Aktuelle Gesamt-Konfiguration (mit dem neuen Winkel) senden
-            # Wir lesen hier alle Slider aus, damit die anderen stabil bleiben
+            # 2. Aktuelle Gesamt-Konfiguration (mit dem neuen Winkel) senden.
+            # Wir lesen hier alle Slider aus, damit die anderen stabil bleiben.
             current_angles = [int(s.get()) for s in sliderArr]
             Sender.send_binary_packet(current_angles, int(step_duration))
 
-            # 3. Warten, bis dieser Servo fertig ist, bevor der nächste startet
+            # 3. Warten, bis dieser Servo fertig ist, bevor der nächste startet.
             # Wir addieren 0.1s Puffer für die mechanische Trägheit
             time.sleep((step_duration / 1000.0) + 0.1)
 

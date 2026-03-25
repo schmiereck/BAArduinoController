@@ -14,6 +14,7 @@ SERIAL_PORT = os.getenv('SERIAL_PORT', '/dev/ttyACM0')
 BAUD_RATE = int(os.getenv('BAUD_RATE', 115200)) # Wichtig: Umwandlung in int!
 
 START_MARKER = 0xAA
+FLUSH_MARKER = 0xFF
 
 #------------------------------------------------------------------------------
 # Init:
@@ -76,6 +77,20 @@ def read_in_waiting():
             print(f"Read-Fehler: {e}")
             return None
     return None
+
+#------------------------------------------------------------------------------
+def send_flush():
+    """
+    Sendet den FLUSH_MARKER, um den Puffer im Arduino zu leeren
+    und die aktuelle Bewegung sofort zu stoppen.
+    """
+    if ser:
+        try:
+            ser.write(struct.pack('B', FLUSH_MARKER))
+            # Optional: Kurze Pause, damit der Arduino Zeit hat zu reagieren
+            # time.sleep(0.01)
+        except Exception as e:
+            print(f"Fehler beim Senden des Flush-Markers: {e}")
 
 #------------------------------------------------------------------------------
 def close_sender():
