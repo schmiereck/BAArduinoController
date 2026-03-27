@@ -63,6 +63,65 @@ class Ros2Bridge(Node):
 
         self.get_logger().info(f'Empfange Trajektorie mit {len(points)} Punkten.')
 
+        # Mapping: Gelenkname -> Index im ROS-Array
+        name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
+
+        expected_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
+
+        for i, point in enumerate(points):
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                return FollowJointTrajectory.Result()
+
+            angles_deg = []
+            for servo_idx, joint_name in enumerate(expected_joints):
+                if joint_name in name_to_ros_idx:
+                    ros_idx = name_to_ros_idx[joint_name]
+                    rad = point.positions[ros_idx]
+                    deg = self.map_ros_to_servo(servo_idx, rad)
+                    angles_deg.append(deg)
+                else:
+                    self.get_logger().error(f'Gelenk {joint_name} nicht in Trajektorie!')
+                    angles_deg.append(90)
+
+            if i == 0:
+                duration_ms = 200
+            else:
+                prev_point = points[i-1]
+                diff = (point.time_from_start.sec - prev_point.time_from_start.sec) + \
+                    (point.time_from_start.nanosec - prev_point.time_from_start.nanosec) * 1e-9
+                duration_ms = max(20, int(diff * 1000))
+
+            Sender.send_binary_packet(angles_deg, duration_ms)
+
+            while True:
+                free_slots = Sender.read_in_waiting()
+                if free_slots is None or free_slots > 1:
+                    break
+                time.sleep(0.01)
+
+        # Aktuelle Position exakt aus letztem Trajektorie-Punkt übernehmen
+        last_point = points[-1]
+        self._current_positions = [
+            last_point.positions[name_to_ros_idx[name]]
+            if name in name_to_ros_idx
+            else self._current_positions[i]
+            for i, name in enumerate(expected_joints)
+        ]
+
+        goal_handle.succeed()
+        result = FollowJointTrajectory.Result()
+        self.get_logger().info('Trajektorie erfolgreich ausgeführt.')
+        return result
+
+    async def execute_callback_old(self, goal_handle):
+        """Verarbeitet die Trajektorie von MoveIt."""
+        trajectory = goal_handle.request.trajectory
+        joint_names = trajectory.joint_names
+        points = trajectory.points
+
+        self.get_logger().info(f'Empfange Trajektorie mit {len(points)} Punkten.')
+
         # 1. Mapping erstellen: Welcher Name liegt an welchem Index im ROS-Array?
         # Beispiel: {'joint_0': 0, 'joint_1': 1, ...}
         name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
