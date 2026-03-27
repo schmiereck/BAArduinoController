@@ -24,7 +24,7 @@
   <link name="shoulder_link">
     <visual>
       <geometry><cylinder length="0.098" radius="0.02"/></geometry>
-      <origin xyz="0.049 0 0" rpy="0 1.5708 0"/>  <!-- entlang X statt Z -->
+      <origin xyz="0 0 0.049"/>  <!-- vertikal, kein rpy -->
       <material name="red"/>
     </visual>
   </link>
@@ -41,12 +41,11 @@
   <link name="upper_arm_link">
     <visual>
       <geometry><cylinder length="0.066" radius="0.02"/></geometry>
-      <origin xyz="0 0 0.033"/>
-      <material name="green"/>
+      <origin xyz="0.033 0 0" rpy="0 1.5708 0"/>
       <material name="green"/>
     </visual>
   </link>
-
+  
   <joint name="joint_2" type="revolute">
     <parent link="upper_arm_link"/>
     <child link="forearm_link"/>
