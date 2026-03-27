@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse
 from control_msgs.action import FollowJointTrajectory
+from sensor_msgs.msg import JointState
 from . import Sender
 import time
 
@@ -17,7 +18,17 @@ class Ros2Bridge(Node):
     def __init__(self):
         super().__init__('ros2_bridge')
 
-        # Action Server initialisieren
+        # Aktuelle Gelenkwinkel (in Radiant)
+        self._current_positions = [0.0, 1.5708, 0.0, 3.14, 1.5708, 0.0]
+
+        # JointState Publisher
+        self._joint_state_publisher = self.create_publisher(
+            JointState, '/joint_states', 10)
+
+        # Timer: publiziert joint_states 10x pro Sekunde
+        self._timer = self.create_timer(0.1, self.publish_joint_states)
+
+        # Action Server
         self._action_server = ActionServer(
             self,
             FollowJointTrajectory,
@@ -27,6 +38,15 @@ class Ros2Bridge(Node):
         )
 
         self.get_logger().info('Robot Arm Bridge Node gestartet und bereit...')
+
+    def publish_joint_states(self):
+        msg = JointState()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.name = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
+        msg.position = self._current_positions
+        msg.velocity = [0.0] * 6
+        msg.effort = [0.0] * 6
+        self._joint_state_publisher.publish(msg)
 
     def cancel_callback(self, goal_handle):
         """Wird aufgerufen, wenn MoveIt die Bewegung abbricht."""
@@ -84,6 +104,12 @@ class Ros2Bridge(Node):
 
             # An Arduino senden
             Sender.send_binary_packet(angles_deg, duration_ms)
+
+            ros_idx_list = [name_to_ros_idx.get(name) for name in expected_joints]
+            self._current_positions = [
+                point.positions[idx] if idx is not None else 0.0
+                for idx in ros_idx_list
+            ]
 
             # Kurze Pause, um den Puffer am Arduino nicht zu überrennen.
             while True:
