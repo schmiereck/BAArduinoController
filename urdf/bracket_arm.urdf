@@ -49,7 +49,7 @@
   <link name="upper_arm_link">
     <visual>
       <!-- geometry><cylinder length="0.098" radius="0.02"/></geometry -->
-      <geometry><box size="0.04 0.02 0.098"/></geometry>
+      <geometry><box size="0.02 0.04 0.098"/></geometry>
       <origin xyz="0 0 0.049"/>
       <material name="green"/>
     </visual>
@@ -68,7 +68,8 @@
   <!-- Unterarm: 66mm, Ellenbogen bis Handgelenk -->
   <link name="forearm_link">
     <visual>
-      <geometry><cylinder length="0.066" radius="0.02"/></geometry>
+      <!-- geometry><cylinder length="0.066" radius="0.02"/></geometry -->
+      <geometry><box size="0.02 0.04 0.066"/></geometry>
       <origin xyz="0 0 0.033"/>
       <material name="blue"/>
     </visual>
@@ -86,7 +87,8 @@
   <!-- Handgelenk: 103mm bis Greifer-Gelenk -->
   <link name="wrist_link">
     <visual>
-      <geometry><cylinder length="0.103" radius="0.015"/></geometry>
+      <!-- geometry><cylinder length="0.103" radius="0.015"/></geometry -->
+      <geometry><box size="0.04 0.02 0.103"/></geometry>
       <origin xyz="0 0 0.0515"/>
       <material name="yellow"/>
     </visual>
