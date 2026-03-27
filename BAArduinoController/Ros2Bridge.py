@@ -19,7 +19,8 @@ class Ros2Bridge(Node):
         super().__init__('ros2_bridge')
 
         # Aktuelle Gelenkwinkel (in Radiant)
-        self._current_positions = [0.0, 1.5708, 0.0, 3.14, 1.5708, 0.0]
+        #self._current_positions = [0.0, 1.5708, 0.0, 3.14, 1.5708, 0.0]
+        self._current_positions = [0.0, 0.0, 0.0, 3.14, 1.5708, 0.0]
 
         # JointState Publisher
         self._joint_state_publisher = self.create_publisher(
