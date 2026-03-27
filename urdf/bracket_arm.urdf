@@ -48,7 +48,8 @@
   <!-- Oberarm: 98mm, Schulter bis Ellenbogen -->
   <link name="upper_arm_link">
     <visual>
-      <geometry><cylinder length="0.098" radius="0.02"/></geometry>
+      <!-- geometry><cylinder length="0.098" radius="0.02"/></geometry -->
+      <geometry><box size="0.04 0.02 0.098"/></geometry>
       <origin xyz="0 0 0.049"/>
       <material name="green"/>
     </visual>
