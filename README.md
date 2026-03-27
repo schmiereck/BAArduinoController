@@ -37,6 +37,8 @@ tkinter & ttk:
 ### Raspberry Pi
 Wie du es baust und startest  
 ```
+micromamba activate ros_env
+
 mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
 git clone https://github.com/schmiereck/BAArduinoController.git
