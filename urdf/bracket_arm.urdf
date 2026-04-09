@@ -110,6 +110,16 @@
     </collision>
   </link>
 
+  <!-- TCP: Werkzeugmittelpunkt am Handgelenk (Anfasser für RViz/MoveIt) -->
+  <!-- MoveIt SRDF: In der Planungsgruppe den tip_link auf tcp_link setzen, dann erscheint der Anfasser am Handgelenk. -->
+  <joint name="joint_tcp" type="fixed">
+    <parent link="wrist_link"/>
+    <child link="tcp_link"/>
+    <origin xyz="0 0 0.103" rpy="0 0 0"/>
+  </joint>
+
+  <link name="tcp_link"/>
+
   <!-- Servo 4: Handgelenk-Rotation (dreht um Längsachse) -->
   <joint name="joint_4" type="revolute">
     <parent link="wrist_link"/>
