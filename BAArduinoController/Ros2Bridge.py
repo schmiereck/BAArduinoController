@@ -29,12 +29,21 @@ class Ros2Bridge(Node):
         # Timer: publiziert joint_states 10x pro Sekunde
         self._timer = self.create_timer(0.1, self.publish_joint_states)
 
-        # Action Server
+        # Action Server: Arm (joint_0–4)
         self._action_server = ActionServer(
             self,
             FollowJointTrajectory,
             '/arm_controller/follow_joint_trajectory',
-            execute_callback=self.execute_callback,
+            execute_callback=self.execute_callback_arm,
+            cancel_callback=self.cancel_callback
+        )
+
+        # Action Server: Greifer (joint_5)
+        self._gripper_action_server = ActionServer(
+            self,
+            FollowJointTrajectory,
+            '/gripper_controller/follow_joint_trajectory',
+            execute_callback=self.execute_callback_gripper,
             cancel_callback=self.cancel_callback
         )
 
@@ -55,18 +64,18 @@ class Ros2Bridge(Node):
         Sender.send_flush()
         return CancelResponse.ACCEPT
 
-    async def execute_callback(self, goal_handle):
-        """Verarbeitet die Trajektorie von MoveIt."""
+    async def _execute_trajectory(self, goal_handle, active_joints):
+        """Gemeinsamer Handler fuer arm_controller und gripper_controller.
+        active_joints: Liste der Joints, die diese Trajektorie enthaelt.
+        Joints ausserhalb dieser Liste behalten ihre aktuelle Position."""
         trajectory = goal_handle.request.trajectory
         joint_names = trajectory.joint_names
         points = trajectory.points
 
-        self.get_logger().info(f'Empfange Trajektorie mit {len(points)} Punkten.')
+        self.get_logger().info(f'Empfange Trajektorie mit {len(points)} Punkten fuer: {active_joints}')
 
-        # Mapping: Gelenkname -> Index im ROS-Array
         name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
-
-        expected_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
+        all_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
 
         for i, point in enumerate(points):
             if goal_handle.is_cancel_requested:
@@ -74,15 +83,13 @@ class Ros2Bridge(Node):
                 return FollowJointTrajectory.Result()
 
             angles_deg = []
-            for servo_idx, joint_name in enumerate(expected_joints):
+            for servo_idx, joint_name in enumerate(all_joints):
                 if joint_name in name_to_ros_idx:
-                    ros_idx = name_to_ros_idx[joint_name]
-                    rad = point.positions[ros_idx]
-                    deg = self.map_ros_to_servo(servo_idx, rad)
-                    angles_deg.append(deg)
+                    rad = point.positions[name_to_ros_idx[joint_name]]
+                    angles_deg.append(self.map_ros_to_servo(servo_idx, rad))
                 else:
-                    self.get_logger().error(f'Gelenk {joint_name} nicht in Trajektorie!')
-                    angles_deg.append(90)
+                    # Nicht in dieser Trajektorie: aktuelle Position beibehalten
+                    angles_deg.append(self.map_ros_to_servo(servo_idx, self._current_positions[servo_idx]))
 
             if i == 0:
                 duration_ms = 200
@@ -100,19 +107,34 @@ class Ros2Bridge(Node):
                     break
                 time.sleep(0.01)
 
-        # Aktuelle Position exakt aus letztem Trajektorie-Punkt übernehmen
+        # Nur die aktiv bewegten Joints in _current_positions aktualisieren
         last_point = points[-1]
-        self._current_positions = [
-            last_point.positions[name_to_ros_idx[name]]
-            if name in name_to_ros_idx
-            else self._current_positions[i]
-            for i, name in enumerate(expected_joints)
-        ]
+        for joint_name in active_joints:
+            if joint_name in name_to_ros_idx:
+                servo_idx = all_joints.index(joint_name)
+                self._current_positions[servo_idx] = last_point.positions[name_to_ros_idx[joint_name]]
 
         goal_handle.succeed()
-        result = FollowJointTrajectory.Result()
-        self.get_logger().info('Trajektorie erfolgreich ausgeführt.')
-        return result
+        self.get_logger().info('Trajektorie erfolgreich ausgefuehrt.')
+        return FollowJointTrajectory.Result()
+
+    async def execute_callback_arm(self, goal_handle):
+        """Arm-Controller: joint_0 bis joint_4."""
+        return await self._execute_trajectory(
+            goal_handle,
+            ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4']
+        )
+
+    async def execute_callback_gripper(self, goal_handle):
+        """Greifer-Controller: joint_5."""
+        return await self._execute_trajectory(goal_handle, ['joint_5'])
+
+    async def execute_callback(self, goal_handle):
+        """Legacy: alle 6 Joints."""
+        return await self._execute_trajectory(
+            goal_handle,
+            ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
+        )
 
     async def execute_callback_old(self, goal_handle):
         """Verarbeitet die Trajektorie von MoveIt."""
