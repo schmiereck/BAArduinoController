@@ -83,14 +83,21 @@ class Ros2Bridge(Node):
         name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
         all_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
 
-        # DEBUG: Ersten und letzten Punkt loggen
+        # DEBUG: Trajektorie-Details loggen
+        p0 = points[0]
+        pN = points[-1]
+        t0 = p0.time_from_start.sec + p0.time_from_start.nanosec * 1e-9
+        tN = pN.time_from_start.sec + pN.time_from_start.nanosec * 1e-9
+        self.get_logger().info(f'  time_from_start: first={t0:.3f}s last={tN:.3f}s')
         for jn in active_joints:
             ri = name_to_ros_idx[jn]
             ci = all_joints.index(jn)
             self.get_logger().info(
                 f'  {jn}: current={self._current_positions[ci]*57.2958:.1f}° '
-                f'traj_first={points[0].positions[ri]*57.2958:.1f}° '
-                f'traj_last={points[-1].positions[ri]*57.2958:.1f}°')
+                f'pt[0]={p0.positions[ri]*57.2958:.1f}° '
+                f'pt[1]={points[1].positions[ri]*57.2958:.1f}° '
+                f'pt[-2]={points[-2].positions[ri]*57.2958:.1f}° '
+                f'pt[-1]={pN.positions[ri]*57.2958:.1f}°')
 
         # --- Phase 1: Alle Punkte an den Arduino senden ---
         for i, point in enumerate(points):
