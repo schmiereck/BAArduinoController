@@ -113,10 +113,12 @@ class Ros2Bridge(Node):
 
             # Auf Arduino-Pufferplatz warten (blockierend, verhindert
             # Paket-Interleaving mit paralleler Trajektorie)
-            while True:
+            wait_start = time.time()
+            while time.time() - wait_start < 5.0:
                 resp = Sender.read_response()
                 if resp is None:
-                    break
+                    time.sleep(0.01)
+                    continue  # Weiter warten, nicht abbrechen
                 free_slots = resp.get('free_slots', 20)
                 # Position-Reports waehrend Phase 1 auch auswerten
                 if resp.get('type') == 'position':
@@ -256,7 +258,7 @@ class Ros2Bridge(Node):
         Kein Offset nötig — die initial_positions kodieren die Home-Stellung bereits in rad.
         """
         angle_deg = angle_rad * 57.2958
-        return int(max(0, min(180, angle_deg)))
+        return int(round(max(0.0, min(180.0, angle_deg))))
 
 def main(args=None):
     rclpy.init(args=args)
