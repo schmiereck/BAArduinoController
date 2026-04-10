@@ -82,13 +82,13 @@ cd ~/ros2_ws
 colcon build --packages-select ba_arduino_controller_moveit_config
 source ~/ros2_ws/install/setup.bash
 
-# Demo (RViz + MoveGroup + fake controllers for testing)
-ros2 launch ba_arduino_controller_moveit_config demo.launch.py
+# Real robot (MoveGroup + RViz, connects to Pi via DDS)
+ros2 launch ba_arduino_controller_moveit_config robot.launch.py
 
-# Production (MoveGroup only, connects to Pi via DDS)
-ros2 launch ba_arduino_controller_moveit_config move_group.launch.py
+# Demo/simulation (MoveGroup + RViz + ros2_control FakeSystem, no Pi needed)
+ros2 launch ba_arduino_controller_moveit_config demo.launch.py
 ```
 
 ## ROS 2 Dependencies
 
-`rclpy`, `control_msgs`, `action_msgs`, `sensor_msgs`, `robot_state_publisher`, `joint_state_publisher`. DDS domain: `ROS_DOMAIN_ID=42` for PC-Pi communication.
+`rclpy`, `control_msgs`, `action_msgs`, `sensor_msgs`, `robot_state_publisher`, `joint_state_publisher`. DDS: CycloneDDS (`RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`), `ROS_DOMAIN_ID=1` for PC-Pi communication.

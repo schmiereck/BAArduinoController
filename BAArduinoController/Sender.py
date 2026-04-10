@@ -6,8 +6,10 @@ from dotenv import load_dotenv
 
 #------------------------------------------------------------------------------
 # --- KONFIGURATION ---
-# Lädt die Variablen aus der .env Datei in das Betriebssystem-Environment.
-load_dotenv()
+# Lädt die Variablen aus der .env Datei (relativ zum Paket-Verzeichnis, nicht CWD).
+_pkg_dir = os.path.dirname(os.path.abspath(__file__))
+_env_path = os.path.join(os.path.dirname(_pkg_dir), '.env')
+load_dotenv(_env_path)
 
 # Zugriff über os.getenv (mit Default-Werten als Fallback)
 SERIAL_PORT = os.getenv('SERIAL_PORT', '/dev/ttyACM0')
