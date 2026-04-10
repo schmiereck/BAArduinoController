@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 #------------------------------------------------------------------------------
 # --- KONFIGURATION ---
 # .env suchen: erst relativ zur Quelldatei (symlink-install), dann CWD.
-_pkg_dir = os.path.dirname(os.path.abspath(__file__))
+_pkg_dir = os.path.dirname(os.path.realpath(__file__))
 _source_env = os.path.join(os.path.dirname(_pkg_dir), '.env')
 if os.path.exists(_source_env):
     load_dotenv(_source_env)
