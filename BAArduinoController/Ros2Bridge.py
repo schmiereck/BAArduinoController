@@ -18,9 +18,11 @@ class Ros2Bridge(Node):
     def __init__(self):
         super().__init__('ros2_bridge')
 
-        # Aktuelle Gelenkwinkel (in Radiant)
-        #self._current_positions = [0.0, 1.5708, 0.0, 3.14, 1.5708, 0.0]
+        # Aktuelle Gelenkwinkel (in Radiant) — nur durch Arduino-Feedback aktualisiert
         self._current_positions = [1.5708, 0.0, 0.0, 3.14, 1.5708, 0.76]
+
+        # Ziel-Positionen fuer Paketberechnung (nicht-aktive Joints)
+        self._target_positions = list(self._current_positions)
 
         # JointState Publisher
         self._joint_state_publisher = self.create_publisher(
@@ -87,17 +89,18 @@ class Ros2Bridge(Node):
                 goal_handle.canceled()
                 return FollowJointTrajectory.Result()
 
-            # Aktive Joints in _current_positions aktualisieren,
+            # _target_positions fuer aktive Joints aktualisieren,
             # damit parallel laufende Trajektorien (arm/gripper) die
-            # aktuellen Werte lesen statt veralteter Positionen.
+            # Zielwerte lesen statt veralteter Positionen.
+            # _current_positions wird NUR durch Arduino-Feedback aktualisiert.
             for joint_name in active_joints:
                 if joint_name in name_to_ros_idx:
                     servo_idx = all_joints.index(joint_name)
-                    self._current_positions[servo_idx] = point.positions[name_to_ros_idx[joint_name]]
+                    self._target_positions[servo_idx] = point.positions[name_to_ros_idx[joint_name]]
 
-            # Servo-Winkel aus _current_positions ableiten
+            # Servo-Winkel aus _target_positions ableiten
             angles_deg = [
-                self.map_ros_to_servo(idx, self._current_positions[idx])
+                self.map_ros_to_servo(idx, self._target_positions[idx])
                 for idx in range(len(all_joints))
             ]
 
