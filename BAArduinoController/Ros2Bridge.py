@@ -82,14 +82,21 @@ class Ros2Bridge(Node):
                 goal_handle.canceled()
                 return FollowJointTrajectory.Result()
 
-            angles_deg = []
-            for servo_idx, joint_name in enumerate(all_joints):
+            # Aktive Joints sofort in _current_positions aktualisieren,
+            # damit parallel laufende Trajektorien (arm/gripper) die
+            # aktuellen Werte lesen statt veralteter Positionen.
+            for joint_name in active_joints:
                 if joint_name in name_to_ros_idx:
-                    rad = point.positions[name_to_ros_idx[joint_name]]
-                    angles_deg.append(self.map_ros_to_servo(servo_idx, rad))
-                else:
-                    # Nicht in dieser Trajektorie: aktuelle Position beibehalten
-                    angles_deg.append(self.map_ros_to_servo(servo_idx, self._current_positions[servo_idx]))
+                    servo_idx = all_joints.index(joint_name)
+                    self._current_positions[servo_idx] = point.positions[name_to_ros_idx[joint_name]]
+
+            # Servo-Winkel aus _current_positions ableiten (enthält jetzt
+            # sowohl die eigenen aktualisierten als auch die von der
+            # parallelen Trajektorie gesetzten Werte).
+            angles_deg = [
+                self.map_ros_to_servo(idx, self._current_positions[idx])
+                for idx in range(len(all_joints))
+            ]
 
             if i == 0:
                 duration_ms = 200
@@ -106,13 +113,6 @@ class Ros2Bridge(Node):
                 if free_slots is None or free_slots > 1:
                     break
                 time.sleep(0.01)
-
-        # Nur die aktiv bewegten Joints in _current_positions aktualisieren
-        last_point = points[-1]
-        for joint_name in active_joints:
-            if joint_name in name_to_ros_idx:
-                servo_idx = all_joints.index(joint_name)
-                self._current_positions[servo_idx] = last_point.positions[name_to_ros_idx[joint_name]]
 
         goal_handle.succeed()
         self.get_logger().info('Trajektorie erfolgreich ausgefuehrt.')
