@@ -3,6 +3,7 @@ from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse
 from control_msgs.action import FollowJointTrajectory
 from sensor_msgs.msg import JointState
+from rclpy.qos import qos_profile_sensor_data
 from . import Sender
 import time
 
@@ -24,9 +25,9 @@ class Ros2Bridge(Node):
         # Ziel-Positionen fuer Paketberechnung (nicht-aktive Joints)
         self._target_positions = list(self._current_positions)
 
-        # JointState Publisher
+        # JointState Publisher — SensorDataQoS (BEST_EFFORT) passend zu MoveIt's Subscriber
         self._joint_state_publisher = self.create_publisher(
-            JointState, '/joint_states', 10)
+            JointState, '/joint_states', qos_profile_sensor_data)
 
         # Timer: publiziert joint_states 10x pro Sekunde
         self._timer = self.create_timer(0.1, self.publish_joint_states)
