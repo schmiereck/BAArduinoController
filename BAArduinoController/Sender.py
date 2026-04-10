@@ -2,14 +2,19 @@ import struct
 import serial
 import time
 import os
+import sys
 from dotenv import load_dotenv
 
 #------------------------------------------------------------------------------
 # --- KONFIGURATION ---
-# Lädt die Variablen aus der .env Datei (relativ zum Paket-Verzeichnis, nicht CWD).
+# .env suchen: erst relativ zur Quelldatei (symlink-install), dann CWD.
 _pkg_dir = os.path.dirname(os.path.abspath(__file__))
-_env_path = os.path.join(os.path.dirname(_pkg_dir), '.env')
-load_dotenv(_env_path)
+_source_env = os.path.join(os.path.dirname(_pkg_dir), '.env')
+if os.path.exists(_source_env):
+    load_dotenv(_source_env)
+else:
+    # Fallback: Suche ab CWD aufwärts (Standard-Verhalten von load_dotenv)
+    load_dotenv()
 
 # Zugriff über os.getenv (mit Default-Werten als Fallback)
 SERIAL_PORT = os.getenv('SERIAL_PORT', '/dev/ttyACM0')
@@ -20,12 +25,13 @@ FLUSH_MARKER = 0xFF
 
 #------------------------------------------------------------------------------
 # Init:
+# sys.stderr wird von ROS2 Launch immer angezeigt (stdout kann gepuffert sein).
 try:
     ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
     time.sleep(2) # Warten auf Arduino Reset
-    print(f"Verbunden mit {SERIAL_PORT}")
+    print(f"[Sender] Verbunden mit {SERIAL_PORT}", file=sys.stderr)
 except Exception as e:
-    print(f"Fehler: {e}")
+    print(f"[Sender] FEHLER: Serial-Verbindung fehlgeschlagen: {e} (Port: {SERIAL_PORT})", file=sys.stderr)
     ser = None
 
 #------------------------------------------------------------------------------
