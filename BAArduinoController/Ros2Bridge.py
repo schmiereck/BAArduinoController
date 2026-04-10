@@ -80,7 +80,19 @@ class Ros2Bridge(Node):
 
         self.get_logger().info(f'Empfange Trajektorie mit {len(points)} Punkten fuer: {active_joints}')
 
+        # DEBUG: Ersten und letzten Punkt + aktuelle Positionen loggen
         name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
+        for jn in joint_names:
+            ri = name_to_ros_idx[jn]
+            first_deg = points[0].positions[ri] * 57.2958
+            last_deg = points[-1].positions[ri] * 57.2958
+            ci = ['joint_0','joint_1','joint_2','joint_3','joint_4','joint_5'].index(jn)
+            cur_deg = self._current_positions[ci] * 57.2958
+            tgt_deg = self._target_positions[ci] * 57.2958
+            self.get_logger().info(
+                f'  {jn}: current={cur_deg:.1f}° target_int={tgt_deg:.1f}° '
+                f'traj_first={first_deg:.1f}° traj_last={last_deg:.1f}°'
+            )
         all_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
 
 
@@ -252,6 +264,8 @@ class Ros2Bridge(Node):
         Wandelt Servo-Grad (0-180) zurueck in Radiant."""
         angles = report.get('angles', [])
         if len(angles) == 6:
+            self.get_logger().info(
+                f'Arduino-Feedback: angles={angles} active={report.get("is_active")}')
             for i in range(6):
                 self._current_positions[i] = angles[i] / 57.2958
 
