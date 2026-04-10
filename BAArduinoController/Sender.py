@@ -22,6 +22,7 @@ BAUD_RATE = int(os.getenv('BAUD_RATE', 115200)) # Wichtig: Umwandlung in int!
 
 START_MARKER = 0xAA
 FLUSH_MARKER = 0xFF
+POSITION_MARKER = 0xBB
 
 #------------------------------------------------------------------------------
 # Init:
@@ -85,6 +86,52 @@ def read_in_waiting():
             print(f"Read-Fehler: {e}")
             return None
     return None
+
+#------------------------------------------------------------------------------
+def read_response():
+    """
+    Liest und parst Antworten vom Arduino.
+    Unterscheidet zwischen:
+    - Position-Report: [0xBB][6×uint8 angles][status] = 8 Bytes
+    - Free-Slots: 1 Byte (0-20)
+
+    Rückgabe: dict mit Typ-Info:
+      {'type': 'position', 'angles': [a0..a5], 'free_slots': N, 'is_active': bool}
+      {'type': 'free_slots', 'free_slots': N}
+      None wenn nichts verfügbar
+    """
+    if not ser or ser.in_waiting == 0:
+        return None
+
+    try:
+        first_byte = ser.read(1)
+        if not first_byte:
+            return None
+
+        if first_byte[0] == POSITION_MARKER:
+            # Positions-Report: noch 7 Bytes lesen
+            remaining = ser.read(7)
+            if len(remaining) < 7:
+                return None
+            angles = list(remaining[:6])
+            status = remaining[6]
+            free_slots = status & 0x7F
+            is_active = bool(status & 0x80)
+            return {
+                'type': 'position',
+                'angles': angles,
+                'free_slots': free_slots,
+                'is_active': is_active
+            }
+        else:
+            # Einfacher Free-Slots-Wert (Legacy)
+            return {
+                'type': 'free_slots',
+                'free_slots': first_byte[0]
+            }
+    except Exception as e:
+        print(f"[Sender] Read-Fehler: {e}", file=sys.stderr)
+        return None
 
 #------------------------------------------------------------------------------
 def send_flush():

@@ -81,13 +81,6 @@ class Ros2Bridge(Node):
         name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
         all_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
 
-        # Startpositionen der aktiven Joints merken (fuer Interpolation)
-        active_indices = []
-        start_positions = list(self._current_positions)
-        for joint_name in active_joints:
-            if joint_name in name_to_ros_idx:
-                active_indices.append(all_joints.index(joint_name))
-
         # --- Phase 1: Alle Punkte an den Arduino senden ---
         for i, point in enumerate(points):
             if goal_handle.is_cancel_requested:
@@ -121,46 +114,40 @@ class Ros2Bridge(Node):
             # Auf Arduino-Pufferplatz warten (blockierend, verhindert
             # Paket-Interleaving mit paralleler Trajektorie)
             while True:
-                free_slots = Sender.read_in_waiting()
-                if free_slots is None or free_slots > 1:
+                resp = Sender.read_response()
+                if resp is None:
+                    break
+                free_slots = resp.get('free_slots', 20)
+                # Position-Reports waehrend Phase 1 auch auswerten
+                if resp.get('type') == 'position':
+                    self._update_from_report(resp)
+                if free_slots > 1:
                     break
                 time.sleep(0.01)
 
-        # --- Phase 2: Auf physische Bewegung warten (simuliertes Encoder-Feedback) ---
-        target_positions = list(self._current_positions)
-        last_point = points[-1]
-        total_duration = last_point.time_from_start.sec + \
-            last_point.time_from_start.nanosec * 1e-9
-
-        # Positionen auf Start zuruecksetzen fuer lineare Interpolation
-        for idx in active_indices:
-            self._current_positions[idx] = start_positions[idx]
-
+        # --- Phase 2: Auf Arduino-Feedback warten (echte Servo-Positionen) ---
         self.get_logger().info(
-            f'Warte {total_duration:.1f}s auf Bewegung (simuliertes Feedback)...')
+            f'Warte auf Arduino-Feedback (Bewegung laeuft)...')
 
+        TIMEOUT = 60.0  # Sicherheits-Timeout
         start_time = time.time()
-        while time.time() - start_time < total_duration:
+
+        while time.time() - start_time < TIMEOUT:
             if goal_handle.is_cancel_requested:
                 Sender.send_flush()
                 goal_handle.canceled()
                 return FollowJointTrajectory.Result()
 
-            # Linearer Fortschritt 0.0 → 1.0
-            fraction = min(1.0, (time.time() - start_time) / total_duration)
+            resp = Sender.read_response()
+            if resp is not None and resp.get('type') == 'position':
+                self._update_from_report(resp)
+                # Arduino meldet idle -> Bewegung fertig
+                if not resp.get('is_active', True):
+                    break
 
-            # Nur aktive Joints interpolieren, andere behaelt ihr Wert
-            for idx in active_indices:
-                self._current_positions[idx] = (
-                    start_positions[idx]
-                    + fraction * (target_positions[idx] - start_positions[idx])
-                )
-
-            time.sleep(0.1)
-
-        # Zielposition exakt setzen
-        for idx in active_indices:
-            self._current_positions[idx] = target_positions[idx]
+            time.sleep(0.05)
+        else:
+            self.get_logger().warn('Timeout beim Warten auf Arduino-Feedback!')
 
         goal_handle.succeed()
         self.get_logger().info('Trajektorie erfolgreich ausgefuehrt.')
@@ -253,6 +240,14 @@ class Ros2Bridge(Node):
         result = FollowJointTrajectory.Result()
         self.get_logger().info('Trajektorie erfolgreich ausgeführt.')
         return result
+
+    def _update_from_report(self, report):
+        """Aktualisiert _current_positions aus einem Arduino Position-Report.
+        Wandelt Servo-Grad (0-180) zurueck in Radiant."""
+        angles = report.get('angles', [])
+        if len(angles) == 6:
+            for i in range(6):
+                self._current_positions[i] = angles[i] / 57.2958
 
     def map_ros_to_servo(self, joint_index, angle_rad):
         """Wandelt ROS-Radianten in Arduino-Servo-Grade um.
