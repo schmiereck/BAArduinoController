@@ -1,4 +1,3 @@
-import asyncio
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse
@@ -157,8 +156,7 @@ class Ros2Bridge(Node):
                     + fraction * (target_positions[idx] - start_positions[idx])
                 )
 
-            # asyncio.sleep gibt den Event-Loop frei (Cancel-Handling etc.)
-            await asyncio.sleep(0.1)
+            time.sleep(0.1)
 
         # Zielposition exakt setzen
         for idx in active_indices:
