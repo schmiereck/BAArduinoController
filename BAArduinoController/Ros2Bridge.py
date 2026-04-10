@@ -83,6 +83,13 @@ class Ros2Bridge(Node):
         name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
         all_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
 
+        # DEBUG: Ersten und letzten Punkt loggen
+        p0 = points[0]
+        pN = points[-1]
+        self.get_logger().info(f'DEBUG Punkt[0] t={p0.time_from_start.sec}.{p0.time_from_start.nanosec:09d}s pos={[f"{p:.2f}" for p in p0.positions]}')
+        self.get_logger().info(f'DEBUG Punkt[{len(points)-1}] t={pN.time_from_start.sec}.{pN.time_from_start.nanosec:09d}s pos={[f"{p:.2f}" for p in pN.positions]}')
+        self.get_logger().info(f'DEBUG _current_positions={[f"{p:.2f}" for p in self._current_positions]}')
+
         # --- Phase 1: Alle Punkte an den Arduino senden ---
         for i, point in enumerate(points):
             if goal_handle.is_cancel_requested:
@@ -112,6 +119,8 @@ class Ros2Bridge(Node):
                     (point.time_from_start.nanosec - prev_point.time_from_start.nanosec) * 1e-9
                 duration_ms = max(20, int(diff * 1000))
 
+            if i == 0 or i == len(points) - 1:
+                self.get_logger().info(f'DEBUG Paket[{i}] servo={angles_deg} dur={duration_ms}ms')
             Sender.send_binary_packet(angles_deg, duration_ms)
 
             # Auf Arduino-Pufferplatz warten (blockierend, verhindert
