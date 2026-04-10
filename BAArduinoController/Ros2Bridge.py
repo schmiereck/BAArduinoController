@@ -207,20 +207,13 @@ class Ros2Bridge(Node):
         return result
 
     def map_ros_to_servo(self, joint_index, angle_rad):
-        """Wandelt ROS-Radianten (relativ) in Arduino-Grade (absolut) um."""
-        # Offsets aus deiner Konfiguration: [Base, Schulter, Ellenbogen, Hand G, Hand D, Greifer]
-        offsets = [90, 0, 0, 180, 90, 45]
+        """Wandelt ROS-Radianten in Arduino-Servo-Grade um.
 
-        # Radianten in Grad umrechnen (1 rad ≈ 57.2958°)
+        Die URDF-Joints haben alle limit 0..3.14 rad, was direkt 0..180° Servo entspricht.
+        Kein Offset nötig — die initial_positions kodieren die Home-Stellung bereits in rad.
+        """
         angle_deg = angle_rad * 57.2958
-
-        # Berechnung basierend auf der Ruhestellung.
-        # Joint 3 (Hand Gelenk) hat Offset 180 und klappt nach 'unten' (negative Radianten).
-        # Wenn MoveIt -1.57 rad (90°) sendet -> 180 + (-90) = 90° am Servo. Passt!
-        servo_angle = offsets[joint_index] + angle_deg
-
-        # Sicherstellen, dass wir innerhalb der 0-180 Grad Hardware-Limits bleiben
-        return int(max(0, min(180, servo_angle)))
+        return int(max(0, min(180, angle_deg)))
 
 def main(args=None):
     rclpy.init(args=args)

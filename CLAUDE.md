@@ -28,10 +28,9 @@ Key modules:
 # Activate ROS environment
 micromamba activate ros_env
 
-# Build
+# Build (--symlink-install required for .env discovery, and avoids rebuilds for Python changes)
 cd ~/ros2_ws
-colcon build --packages-select BAArduinoController
-# Use --symlink-install during development to avoid rebuilding after Python changes
+colcon build --packages-select BAArduinoController --symlink-install
 
 # Source and launch
 source ~/ros2_ws/install/setup.bash
@@ -46,7 +45,9 @@ python GUIController.py
 ```
 
 ### Serial port configuration
-Copy `.env.example` to `.env` and set `SERIAL_PORT` and `BAUD_RATE`.
+Copy `.env.example` to `.env` and set `SERIAL_PORT` (e.g. `/dev/ttyACM0`) and `BAUD_RATE`. The port can change between reboots (`ttyACM0` → `ttyACM1`); check with `ls /dev/ttyACM*`.
+
+**Important:** The Pi package must be built with `--symlink-install` so that `Sender.py` can find the `.env` via `os.path.realpath(__file__)` resolving back to the source tree.
 
 ## Serial Protocol
 
