@@ -1,3 +1,4 @@
+import asyncio
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse
@@ -72,17 +73,29 @@ class Ros2Bridge(Node):
         joint_names = trajectory.joint_names
         points = trajectory.points
 
+        if not points:
+            goal_handle.succeed()
+            return FollowJointTrajectory.Result()
+
         self.get_logger().info(f'Empfange Trajektorie mit {len(points)} Punkten fuer: {active_joints}')
 
         name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
         all_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
 
+        # Startpositionen der aktiven Joints merken (fuer Interpolation)
+        active_indices = []
+        start_positions = list(self._current_positions)
+        for joint_name in active_joints:
+            if joint_name in name_to_ros_idx:
+                active_indices.append(all_joints.index(joint_name))
+
+        # --- Phase 1: Alle Punkte an den Arduino senden ---
         for i, point in enumerate(points):
             if goal_handle.is_cancel_requested:
                 goal_handle.canceled()
                 return FollowJointTrajectory.Result()
 
-            # Aktive Joints sofort in _current_positions aktualisieren,
+            # Aktive Joints in _current_positions aktualisieren,
             # damit parallel laufende Trajektorien (arm/gripper) die
             # aktuellen Werte lesen statt veralteter Positionen.
             for joint_name in active_joints:
@@ -90,9 +103,7 @@ class Ros2Bridge(Node):
                     servo_idx = all_joints.index(joint_name)
                     self._current_positions[servo_idx] = point.positions[name_to_ros_idx[joint_name]]
 
-            # Servo-Winkel aus _current_positions ableiten (enthält jetzt
-            # sowohl die eigenen aktualisierten als auch die von der
-            # parallelen Trajektorie gesetzten Werte).
+            # Servo-Winkel aus _current_positions ableiten
             angles_deg = [
                 self.map_ros_to_servo(idx, self._current_positions[idx])
                 for idx in range(len(all_joints))
@@ -108,11 +119,50 @@ class Ros2Bridge(Node):
 
             Sender.send_binary_packet(angles_deg, duration_ms)
 
+            # Auf Arduino-Pufferplatz warten (blockierend, verhindert
+            # Paket-Interleaving mit paralleler Trajektorie)
             while True:
                 free_slots = Sender.read_in_waiting()
                 if free_slots is None or free_slots > 1:
                     break
                 time.sleep(0.01)
+
+        # --- Phase 2: Auf physische Bewegung warten (simuliertes Encoder-Feedback) ---
+        target_positions = list(self._current_positions)
+        last_point = points[-1]
+        total_duration = last_point.time_from_start.sec + \
+            last_point.time_from_start.nanosec * 1e-9
+
+        # Positionen auf Start zuruecksetzen fuer lineare Interpolation
+        for idx in active_indices:
+            self._current_positions[idx] = start_positions[idx]
+
+        self.get_logger().info(
+            f'Warte {total_duration:.1f}s auf Bewegung (simuliertes Feedback)...')
+
+        start_time = time.time()
+        while time.time() - start_time < total_duration:
+            if goal_handle.is_cancel_requested:
+                Sender.send_flush()
+                goal_handle.canceled()
+                return FollowJointTrajectory.Result()
+
+            # Linearer Fortschritt 0.0 → 1.0
+            fraction = min(1.0, (time.time() - start_time) / total_duration)
+
+            # Nur aktive Joints interpolieren, andere behaelt ihr Wert
+            for idx in active_indices:
+                self._current_positions[idx] = (
+                    start_positions[idx]
+                    + fraction * (target_positions[idx] - start_positions[idx])
+                )
+
+            # asyncio.sleep gibt den Event-Loop frei (Cancel-Handling etc.)
+            await asyncio.sleep(0.1)
+
+        # Zielposition exakt setzen
+        for idx in active_indices:
+            self._current_positions[idx] = target_positions[idx]
 
         goal_handle.succeed()
         self.get_logger().info('Trajektorie erfolgreich ausgefuehrt.')
