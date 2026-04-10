@@ -80,21 +80,36 @@ class Ros2Bridge(Node):
 
         self.get_logger().info(f'Empfange Trajektorie mit {len(points)} Punkten fuer: {active_joints}')
 
-        # DEBUG: Ersten und letzten Punkt + aktuelle Positionen loggen
         name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
-        for jn in joint_names:
-            ri = name_to_ros_idx[jn]
-            first_deg = points[0].positions[ri] * 57.2958
-            last_deg = points[-1].positions[ri] * 57.2958
-            ci = ['joint_0','joint_1','joint_2','joint_3','joint_4','joint_5'].index(jn)
-            cur_deg = self._current_positions[ci] * 57.2958
-            tgt_deg = self._target_positions[ci] * 57.2958
-            self.get_logger().info(
-                f'  {jn}: current={cur_deg:.1f}° target_int={tgt_deg:.1f}° '
-                f'traj_first={first_deg:.1f}° traj_last={last_deg:.1f}°'
-            )
         all_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
 
+        # OMPL RRTConnect kann umgekehrte Trajektorien liefern (Ziel zuerst, Start zuletzt).
+        # Erkennung: Ist der letzte Punkt naeher an der aktuellen Position als der erste?
+        if len(points) >= 2:
+            dist_first = 0.0
+            dist_last = 0.0
+            for jn in active_joints:
+                if jn in name_to_ros_idx:
+                    ri = name_to_ros_idx[jn]
+                    ci = all_joints.index(jn)
+                    cur = self._current_positions[ci]
+                    dist_first += abs(points[0].positions[ri] - cur)
+                    dist_last += abs(points[-1].positions[ri] - cur)
+
+            if dist_last < dist_first:
+                self.get_logger().warn(
+                    f'Umgekehrte Trajektorie erkannt (dist_first={dist_first:.3f}, '
+                    f'dist_last={dist_last:.3f}). Reihenfolge wird korrigiert.')
+                points = list(reversed(points))
+
+        # DEBUG: Ersten und letzten Punkt loggen
+        for jn in active_joints:
+            ri = name_to_ros_idx[jn]
+            ci = all_joints.index(jn)
+            self.get_logger().info(
+                f'  {jn}: current={self._current_positions[ci]*57.2958:.1f}° '
+                f'traj_first={points[0].positions[ri]*57.2958:.1f}° '
+                f'traj_last={points[-1].positions[ri]*57.2958:.1f}°')
 
         # --- Phase 1: Alle Punkte an den Arduino senden ---
         for i, point in enumerate(points):
@@ -121,8 +136,9 @@ class Ros2Bridge(Node):
                 duration_ms = 200
             else:
                 prev_point = points[i-1]
-                diff = (point.time_from_start.sec - prev_point.time_from_start.sec) + \
-                    (point.time_from_start.nanosec - prev_point.time_from_start.nanosec) * 1e-9
+                diff = abs(
+                    (point.time_from_start.sec - prev_point.time_from_start.sec) +
+                    (point.time_from_start.nanosec - prev_point.time_from_start.nanosec) * 1e-9)
                 duration_ms = max(20, int(diff * 1000))
 
             Sender.send_binary_packet(angles_deg, duration_ms)
