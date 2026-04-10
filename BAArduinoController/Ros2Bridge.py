@@ -83,26 +83,6 @@ class Ros2Bridge(Node):
         name_to_ros_idx = {name: i for i, name in enumerate(joint_names)}
         all_joints = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
 
-        # Invertierte Trajektorie erkennen und korrigieren:
-        # OMPL/RRTConnect liefert bei bidirektionaler Suche manchmal den
-        # Pfad in Goal→Start-Richtung. Erkennung: Punkt[0] weiter von
-        # aktueller Position entfernt als Punkt[N].
-        p0 = points[0]
-        pN = points[-1]
-        dist_first = sum(
-            (p0.positions[name_to_ros_idx[j]] - self._current_positions[all_joints.index(j)]) ** 2
-            for j in active_joints if j in name_to_ros_idx)
-        dist_last = sum(
-            (pN.positions[name_to_ros_idx[j]] - self._current_positions[all_joints.index(j)]) ** 2
-            for j in active_joints if j in name_to_ros_idx)
-
-        if dist_first > dist_last + 0.01:
-            points = list(reversed(points))
-            self.get_logger().warn(
-                f'Trajektorie invertiert (dist_start={dist_first:.3f}, dist_end={dist_last:.3f}) — umgekehrt.')
-        else:
-            self.get_logger().info(
-                f'Trajektorie OK (dist_start={dist_first:.3f}, dist_end={dist_last:.3f})')
 
         # --- Phase 1: Alle Punkte an den Arduino senden ---
         for i, point in enumerate(points):
@@ -129,12 +109,10 @@ class Ros2Bridge(Node):
                 duration_ms = 200
             else:
                 prev_point = points[i-1]
-                diff = abs((point.time_from_start.sec - prev_point.time_from_start.sec) +
-                    (point.time_from_start.nanosec - prev_point.time_from_start.nanosec) * 1e-9)
+                diff = (point.time_from_start.sec - prev_point.time_from_start.sec) + \
+                    (point.time_from_start.nanosec - prev_point.time_from_start.nanosec) * 1e-9
                 duration_ms = max(20, int(diff * 1000))
 
-            if i <= 2 or i >= len(points) - 2:
-                self.get_logger().info(f'DEBUG Paket[{i}] servo={angles_deg} dur={duration_ms}ms')
             Sender.send_binary_packet(angles_deg, duration_ms)
 
             # Auf Arduino-Pufferplatz warten (blockierend, verhindert
