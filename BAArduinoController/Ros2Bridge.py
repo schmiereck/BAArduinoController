@@ -53,9 +53,7 @@ class Ros2Bridge(Node):
 
     def publish_joint_states(self):
         msg = JointState()
-        # Set stamp to zero to bypass strict clock synchronization issues in WSL2
-        msg.header.stamp.sec = 0
-        msg.header.stamp.nanosec = 0
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = ''
         msg.name = ['joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5']
         msg.position = self._current_positions
