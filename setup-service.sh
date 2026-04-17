@@ -5,8 +5,6 @@
 set -e
 
 SERVICE_NAME="baarm-bridge"
-WORKSPACE_DIR="$HOME/ros2_ws"
-SCRIPT_DIR="$WORKSPACE_DIR/src/BAArduinoController"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "BA Arm ROS2 Bridge - Service Setup"
@@ -18,13 +16,33 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-# 1. Kopiere Service-File
+# Bestimme den echten User und Workspace-Pfad (funktioniert auch mit sudo)
+if [ -n "$SUDO_USER" ]; then
+    REAL_USER="$SUDO_USER"
+    REAL_HOME="/home/$SUDO_USER"
+else
+    REAL_USER="pi"
+    REAL_HOME="/home/pi"
+fi
+WORKSPACE_DIR="$REAL_HOME/ros2_ws"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "User: $REAL_USER"
+echo "Workspace: $WORKSPACE_DIR"
+echo "Script-Pfad: $SCRIPT_DIR"
 echo ""
+
+# 1. Kopiere Service-File
 echo "[1/3] Installiere systemd Service..."
 if [ -f "$SCRIPT_DIR/baarm-bridge.service" ]; then
-    cp "$SCRIPT_DIR/baarm-bridge.service" /etc/systemd/system/
+    # Passe User an (wenn nicht pi)
+    if [ "$REAL_USER" != "pi" ]; then
+        sed "s/User=pi/User=$REAL_USER/" "$SCRIPT_DIR/baarm-bridge.service" > /etc/systemd/system/baarm-bridge.service
+    else
+        cp "$SCRIPT_DIR/baarm-bridge.service" /etc/systemd/system/
+    fi
     systemctl daemon-reload
-    echo "✓ Service-Datei installiert"
+    echo "✓ Service-Datei installiert (User: $REAL_USER)"
 else
     echo "✗ baarm-bridge.service nicht gefunden in $SCRIPT_DIR"
     exit 1
@@ -43,13 +61,15 @@ fi
 
 # 3. Erstelle ROS2-Umgebungs-Datei (optional)
 echo "[3/3] Konfiguriere Umgebungsvariablen..."
-cat > /home/pi/.ros2_env << EOF
+cat > $REAL_HOME/.ros2_env << EOF
 ROS_DISTRO=humble
 ROS_DOMAIN_ID=1
 RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 EOF
-chown pi:pi /home/pi/.ros2_env
-chmod 600 /home/pi/.ros2_env
+chown $REAL_USER:$REAL_USER $REAL_HOME/.ros2_env
+chmod 600 $REAL_HOME/.ros2_env
+chown $REAL_USER:$REAL_USER $REAL_HOME/.ros2_env
+chmod 600 $REAL_HOME/.ros2_env
 echo "✓ ROS2-Umgebungsvariablen konfiguriert"
 
 echo ""

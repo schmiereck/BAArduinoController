@@ -4,9 +4,9 @@
 
 set -e  # Exit on error
 
-WORKSPACE_DIR="$HOME/ros2_ws"
 PACKAGE_NAME="BAArduinoController"
 SERVICE_NAME="baarm-bridge"
+WORKSPACE_DIR="$HOME/ros2_ws"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "BA Arm ROS2 Bridge - Deploy Script"
