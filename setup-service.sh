@@ -35,14 +35,13 @@ echo ""
 # 1. Kopiere Service-File
 echo "[1/3] Installiere systemd Service..."
 if [ -f "$SCRIPT_DIR/baarm-bridge.service" ]; then
-    # Passe User an (wenn nicht pi)
-    if [ "$REAL_USER" != "pi" ]; then
-        sed "s/User=pi/User=$REAL_USER/" "$SCRIPT_DIR/baarm-bridge.service" > /etc/systemd/system/baarm-bridge.service
-    else
-        cp "$SCRIPT_DIR/baarm-bridge.service" /etc/systemd/system/
-    fi
+    # Kopiere und passe User + Pfade an
+    TEMP_SERVICE=$(mktemp)
+    sed "s|User=pi|User=$REAL_USER|g; s|/home/pi|$REAL_HOME|g" "$SCRIPT_DIR/baarm-bridge.service" > "$TEMP_SERVICE"
+    mv "$TEMP_SERVICE" /etc/systemd/system/baarm-bridge.service
+    chmod 644 /etc/systemd/system/baarm-bridge.service
     systemctl daemon-reload
-    echo "✓ Service-Datei installiert (User: $REAL_USER)"
+    echo "✓ Service-Datei installiert (User: $REAL_USER, Home: $REAL_HOME)"
 else
     echo "✗ baarm-bridge.service nicht gefunden in $SCRIPT_DIR"
     exit 1

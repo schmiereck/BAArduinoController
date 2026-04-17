@@ -10,11 +10,15 @@ User=pi
 WorkingDirectory=/home/pi/ros2_ws
 Environment="ROS_DOMAIN_ID=1"
 Environment="RMW_IMPLEMENTATION=rmw_cyclonedds_cpp"
-EnvironmentFile=/home/pi/.ros2_env
+Environment="ROS_DISTRO=humble"
+# Optional: externe Env-Variablen laden (wenn nicht vorhanden, keine Fehler)
+EnvironmentFile=-/home/pi/.ros2_env
 
-# Starte die ROS2 Launch
-# Der ExecStart nutzt die echte HOME-variable des Users (wird beim Start ersetzt)
-ExecStart=/bin/bash -c 'source $HOME/.bashrc && source $HOME/ros2_ws/install/setup.bash && ros2 launch BAArduinoController pi_bridge.launch.py'
+# Starte die ROS2 Launch (optional: source .bashrc falls vorhanden)
+ExecStart=/bin/bash -c '\
+  [ -f $HOME/.bashrc ] && source $HOME/.bashrc; \
+  source $HOME/ros2_ws/install/setup.bash; \
+  exec ros2 launch BAArduinoController pi_bridge.launch.py'
 
 # Auto-neustarten bei Fehler
 Restart=on-failure
