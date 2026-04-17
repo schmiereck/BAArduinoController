@@ -132,7 +132,7 @@
   <joint name="joint_grasp" type="fixed">
     <parent link="gripper_base_link"/>
     <child link="grasp_link"/>
-    <origin xyz="0 0.01 0.05" rpy="0 0 0"/>
+    <origin xyz="0 0.01 0.07" rpy="0 0 0"/>
   </joint>
 
   <link name="grasp_link"/>
