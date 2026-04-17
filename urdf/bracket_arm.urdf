@@ -137,6 +137,35 @@
 
   <link name="grasp_link"/>
 
+  <!-- ============================================================
+       Calibration markers (ba_autocalib).
+       Offsets are PLACEHOLDER — remeasure with caliper before use.
+       Coordinate frames = URDF parent-link frame (see ba_autocalib README).
+       ============================================================ -->
+  <!-- Orange marker on top of the gripper housing (primary data point) -->
+  <joint name="joint_marker_grasp" type="fixed">
+    <parent link="gripper_base_link"/>
+    <child link="marker_grasp"/>
+    <origin xyz="0 0 0.02" rpy="0 0 0"/>
+  </joint>
+  <link name="marker_grasp"/>
+
+  <!-- Green marker on the forearm mid-point -->
+  <joint name="joint_marker_forearm" type="fixed">
+    <parent link="forearm_link"/>
+    <child link="marker_forearm"/>
+    <origin xyz="0 0 0.033" rpy="0 0 0"/>
+  </joint>
+  <link name="marker_forearm"/>
+
+  <!-- Blue marker on the base plate (static anchor) -->
+  <joint name="joint_marker_base" type="fixed">
+    <parent link="base_link"/>
+    <child link="marker_base"/>
+    <origin xyz="0.05 0.0 0.005" rpy="0 0 0"/>
+  </joint>
+  <link name="marker_base"/>
+
   <!-- Greifer-Basis -->
   <link name="gripper_base_link">
     <visual>
