@@ -128,6 +128,15 @@
 
   <link name="tcp_link"/>
 
+  <!-- Grasp-Punkt: Mittelpunkt zwischen den vorderen Fingern (Greifreferenz für IK/Perception) -->
+  <joint name="joint_grasp" type="fixed">
+    <parent link="gripper_base_link"/>
+    <child link="grasp_link"/>
+    <origin xyz="0 0.01 0.05" rpy="0 0 0"/>
+  </joint>
+
+  <link name="grasp_link"/>
+
   <!-- Greifer-Basis -->
   <link name="gripper_base_link">
     <visual>
