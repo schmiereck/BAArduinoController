@@ -64,6 +64,7 @@ cat > $REAL_HOME/.ros2_env << EOF
 ROS_DISTRO=humble
 ROS_DOMAIN_ID=1
 RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+CYCLONEDDS_URI=file://$REAL_HOME/cyclonedds.xml
 EOF
 chown $REAL_USER:$REAL_USER $REAL_HOME/.ros2_env
 chmod 600 $REAL_HOME/.ros2_env

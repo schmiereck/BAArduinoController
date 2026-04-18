@@ -11,6 +11,7 @@ WorkingDirectory=/home/pi/ros2_ws
 Environment="ROS_DOMAIN_ID=1"
 Environment="RMW_IMPLEMENTATION=rmw_cyclonedds_cpp"
 Environment="ROS_DISTRO=humble"
+Environment="CYCLONEDDS_URI=file:///home/pi/cyclonedds.xml"
 # Optional: externe Env-Variablen laden (wenn nicht vorhanden, keine Fehler)
 EnvironmentFile=-/home/pi/.ros2_env
 

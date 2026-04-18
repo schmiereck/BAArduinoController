@@ -142,19 +142,19 @@
        Offsets are PLACEHOLDER — remeasure with caliper before use.
        Coordinate frames = URDF parent-link frame (see ba_autocalib README).
        ============================================================ -->
-  <!-- Orange marker on top of the gripper housing (primary data point) -->
+  <!-- Red/Orange marker on top of the gripper housing (primary data point) -->
   <joint name="joint_marker_grasp" type="fixed">
     <parent link="gripper_base_link"/>
     <child link="marker_grasp"/>
-    <origin xyz="0 0.025 0.02" rpy="0 0 0"/>
+    <origin xyz="0 0.03 0.02" rpy="0 0 0"/>
   </joint>
   <link name="marker_grasp"/>
 
-  <!-- Green marker on the forearm mid-point -->
+  <!-- Yellow/Green marker on the forearm mid-point -->
   <joint name="joint_marker_forearm" type="fixed">
     <parent link="forearm_link"/>
     <child link="marker_forearm"/>
-    <origin xyz="0 0.01 0.11" rpy="0 0 0"/>
+    <origin xyz="0 0.02 0.11" rpy="0 0 0"/>
   </joint>
   <link name="marker_forearm"/>
 
@@ -162,7 +162,7 @@
   <joint name="joint_marker_base" type="fixed">
     <parent link="base_link"/>
     <child link="marker_base"/>
-    <origin xyz="0.095 0.065 0.005" rpy="0 0 0"/>
+    <origin xyz="0.095 0.065 0.015" rpy="0 0 0"/>
   </joint>
   <link name="marker_base"/>
 
