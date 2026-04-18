@@ -52,16 +52,16 @@
     <limit lower="0" upper="3.14160" effort="10" velocity="1.0"/>
   </joint>
 
-  <!-- Oberarm: 98mm, Schulter bis Ellenbogen -->
+  <!-- Oberarm: 100mm, Schulter bis Ellenbogen -->
   <link name="upper_arm_link">
     <visual>
-      <geometry><box size="0.02 0.04 0.098"/></geometry>
-      <origin xyz="0 0 0.049"/>
+      <geometry><box size="0.02 0.04 0.10"/></geometry>
+      <origin xyz="0 0 0.05"/>
       <material name="cyan"/>
     </visual>
     <collision>
-      <geometry><box size="0.02 0.04 0.098"/></geometry>
-      <origin xyz="0 0 0.049"/>
+      <geometry><box size="0.02 0.04 0.10"/></geometry>
+      <origin xyz="0 0 0.05"/>
     </collision>
   </link>
 
@@ -69,7 +69,7 @@
   <joint name="joint_2" type="revolute">
     <parent link="upper_arm_link"/>
     <child link="forearm_link"/>
-    <origin xyz="0 0 0.098" rpy="0 1.5708 0"/>
+    <origin xyz="0 0 0.10" rpy="0 1.5708 0"/>
     <!-- Drehrichtung. Umgekehrt eingebaut, daher -1. -->
     <axis xyz="0 -1 0"/>
     <limit lower="0" upper="3.14160" effort="10" velocity="1.0"/>
@@ -97,24 +97,24 @@
     <limit lower="0" upper="3.14160" effort="10" velocity="1.0"/>
   </joint>
 
-  <!-- Handgelenk: 103mm bis Greifer-Gelenk -->
+  <!-- Handgelenk: 72mm -->
   <link name="wrist_link">
     <visual>
-      <geometry><box size="0.04 0.02 0.103"/></geometry>
-      <origin xyz="0 0 0.0515"/>
+      <geometry><box size="0.04 0.02 0.072"/></geometry>
+      <origin xyz="0 0 0.036"/>
       <material name="yellow"/>
     </visual>
     <collision>
-      <geometry><box size="0.04 0.02 0.103"/></geometry>
-      <origin xyz="0 0 0.0515"/>
+      <geometry><box size="0.04 0.02 0.072"/></geometry>
+      <origin xyz="0 0 0.036"/>
     </collision>
   </link>
 
-  <!-- Servo 4: Handgelenk-Rotation (dreht um Längsachse) -->
+  <!-- Servo 4: Handgelenk-Rotation (dreht um Längsachse), am Ende von wrist_link (72mm) -->
   <joint name="joint_4" type="revolute">
     <parent link="wrist_link"/>
     <child link="gripper_base_link"/>
-    <origin xyz="0 0 0.103" rpy="0 0 0"/>
+    <origin xyz="0 0 0.072" rpy="0 0 0"/>
     <axis xyz="0 0 1"/>
     <limit lower="0" upper="3.14160" effort="10" velocity="1.0"/>
   </joint>
@@ -132,7 +132,7 @@
   <joint name="joint_grasp" type="fixed">
     <parent link="gripper_base_link"/>
     <child link="grasp_link"/>
-    <origin xyz="0 0.01 0.07" rpy="0 0 0"/>
+    <origin xyz="0 0.01 0.10" rpy="0 0 0"/>
   </joint>
 
   <link name="grasp_link"/>
@@ -142,50 +142,76 @@
        Offsets are PLACEHOLDER — remeasure with caliper before use.
        Coordinate frames = URDF parent-link frame (see ba_autocalib README).
        ============================================================ -->
-  <!-- Red/Orange marker on top of the gripper housing (primary data point) -->
+  <!-- Red ball on the gripper housing (primary data point).
+       Measured to ball centre with caliper:
+         5 cm along gripper axis (z) from joint_4 rotation point,
+         2 cm outward from axis (y). Ball radius 9 mm. -->
   <joint name="joint_marker_grasp" type="fixed">
     <parent link="gripper_base_link"/>
     <child link="marker_grasp"/>
-    <origin xyz="0 0.03 0.02" rpy="0 0 0"/>
+    <origin xyz="0 0.03 0.05" rpy="0 0 0"/>
   </joint>
-  <link name="marker_grasp"/>
+  <link name="marker_grasp">
+    <visual>
+      <geometry><sphere radius="0.009"/></geometry>
+      <material name="red"><color rgba="1 0 0 1"/></material>
+    </visual>
+  </link>
 
-  <!-- Yellow/Green marker on the forearm mid-point -->
+  <!-- Yellow ball on the wrist.
+       Physically attached to wrist_link (not forearm_link).
+       PLACEHOLDER — measure from joint_3 (wrist_link origin) with caliper:
+         z = distance along wrist axis from joint_3
+         x = outward offset (verified: -x direction) -->
   <joint name="joint_marker_forearm" type="fixed">
-    <parent link="forearm_link"/>
+    <parent link="wrist_link"/>
     <child link="marker_forearm"/>
-    <origin xyz="0 0.02 0.11" rpy="0 0 0"/>
+    <origin xyz="-0.02 0 0.05" rpy="0 0 0"/>
   </joint>
-  <link name="marker_forearm"/>
+  <link name="marker_forearm">
+    <visual>
+      <geometry><sphere radius="0.009"/></geometry>
+      <material name="marker_yellow"><color rgba="1 1 0 1"/></material>
+    </visual>
+  </link>
 
-  <!-- Blue marker on the base plate (static anchor) -->
+  <!-- Blue ball on the base plate (static anchor).
+       Measured to ball centre with caliper:
+         6.5 cm forward, 9.5 cm left, 1.5 cm up.
+       base_link frame: +X=right, +Y=forward, +Z=up (verified in RViz).
+       Therefore: forward=+Y, left=-X. -->
   <joint name="joint_marker_base" type="fixed">
     <parent link="base_link"/>
     <child link="marker_base"/>
-    <origin xyz="0.095 0.065 0.015" rpy="0 0 0"/>
+    <origin xyz="-0.095 0.065 0.015" rpy="0 0 0"/>
   </joint>
-  <link name="marker_base"/>
+  <link name="marker_base">
+    <visual>
+      <geometry><sphere radius="0.009"/></geometry>
+      <material name="marker_blue"><color rgba="0 0 1 1"/></material>
+    </visual>
+  </link>
 
-  <!-- Greifer-Basis -->
+  <!-- Greifer-Basis: 30mm -->
   <link name="gripper_base_link">
     <visual>
-      <geometry><box size="0.03 0.03 0.02"/></geometry>
-      <origin xyz="0 0 0.01"/>
+      <geometry><box size="0.03 0.03 0.03"/></geometry>
+      <origin xyz="0 0 0.015"/>
       <material name="orange"/>
     </visual>
     <collision>
-      <geometry><box size="0.03 0.03 0.02"/></geometry>
-      <origin xyz="0 0 0.01"/>
+      <geometry><box size="0.03 0.03 0.03"/></geometry>
+      <origin xyz="0 0 0.015"/>
     </collision>
   </link>
 
   <!-- Servo 5: Greifer öffnen/schliessen -->
 
-  <!-- Linker Finger -->
+  <!-- Linker Finger, an der Vorderkante gripper_base (z=0.03) -->
   <joint name="joint_5" type="revolute">
     <parent link="gripper_base_link"/>
     <child link="gripper_finger_left_link"/>
-    <origin xyz="-0.01 0.01 0.0" rpy="0 0 0"/>
+    <origin xyz="-0.01 0.01 0.03" rpy="0 0 0"/>
     <axis xyz="0 -1 0"/>
     <limit lower="0" upper="3.14160" effort="10" velocity="1.0"/>
   </joint>
@@ -207,7 +233,7 @@
   <joint name="joint_5_mimic" type="revolute">
     <parent link="gripper_base_link"/>
     <child link="gripper_finger_right_link"/>
-    <origin xyz="0.01 0.01 0.0" rpy="0 0 0"/>
+    <origin xyz="0.01 0.01 0.03" rpy="0 0 0"/>
     <axis xyz="0 -1 0"/>
     <limit lower="0" upper="3.14160" effort="10" velocity="1.0"/>
     <mimic joint="joint_5" multiplier="-1" offset="0"/>
