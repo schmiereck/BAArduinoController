@@ -252,4 +252,19 @@
     </collision>
   </link>
 
+
+  <!-- Overview camera — physically measured position 2026-04-19.
+       base_link: +X=right, +Y=forward, +Z=up.
+       Camera at: 17 cm forward (+Y), 16 cm left (-X), 34 cm up (+Z).
+       Optical axis toward workspace: +X and -Z (right + down).
+       pitch = pi - atan(17/34) = pi - atan(0.5) ≈ 2.678 rad, yaw/roll = 0.
+       Named "..._nominal" to avoid TF conflict with autocalib_node,
+       which publishes "overview_camera_link" after each solve. -->
+  <joint name="joint_overview_camera" type="fixed">
+    <parent link="base_link"/>
+    <child link="overview_camera_link"/>
+    <origin xyz="-0.16 0.17 0.34" rpy="-2.678 0 -1.5708"/>
+  </joint>
+  <link name="overview_camera_link"/>
+
 </robot>
