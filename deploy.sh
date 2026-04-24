@@ -21,7 +21,7 @@ sleep 2
 # 2. Git Pull
 echo "[2/4] Pullen von Git-Updates..."
 cd "$WORKSPACE_DIR/src/$PACKAGE_NAME"
-git pull origin main || git pull origin master || echo "⚠ Git pull fehlgeschlagen (offline?)"
+git pull origin master || git pull origin main || echo "⚠ Git pull fehlgeschlagen (offline?)"
 
 # 3. Build
 echo "[3/4] Baue Projekt mit colcon..."

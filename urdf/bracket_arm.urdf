@@ -46,22 +46,22 @@
   <joint name="joint_1" type="revolute">
     <parent link="turret_link"/>
     <child link="upper_arm_link"/>
-    <!-- 0° = horizontal, daher -90° Offset -->
-    <origin xyz="0 0 0.082" rpy="0 -1.5708 0"/>
+    <!-- 0° = horizontal, daher -90° Offset. Schulter 8mm links versetzt. -->
+    <origin xyz="-0.008 0 0.082" rpy="0 -1.5708 0"/>
     <axis xyz="0 1 0"/>
     <limit lower="0" upper="3.14160" effort="10" velocity="1.0"/>
   </joint>
 
-  <!-- Oberarm: 100mm, Schulter bis Ellenbogen -->
+  <!-- Oberarm: 98mm, Schulter bis Ellenbogen -->
   <link name="upper_arm_link">
     <visual>
-      <geometry><box size="0.02 0.04 0.10"/></geometry>
-      <origin xyz="0 0 0.05"/>
+      <geometry><box size="0.02 0.04 0.098"/></geometry>
+      <origin xyz="0 0 0.049"/>
       <material name="cyan"/>
     </visual>
     <collision>
-      <geometry><box size="0.02 0.04 0.10"/></geometry>
-      <origin xyz="0 0 0.05"/>
+      <geometry><box size="0.02 0.04 0.098"/></geometry>
+      <origin xyz="0 0 0.049"/>
     </collision>
   </link>
 
@@ -69,22 +69,22 @@
   <joint name="joint_2" type="revolute">
     <parent link="upper_arm_link"/>
     <child link="forearm_link"/>
-    <origin xyz="0 0 0.10" rpy="0 1.5708 0"/>
+    <origin xyz="0 0 0.098" rpy="0 1.5708 0"/>
     <!-- Drehrichtung. Umgekehrt eingebaut, daher -1. -->
     <axis xyz="0 -1 0"/>
     <limit lower="0" upper="3.14160" effort="10" velocity="1.0"/>
   </joint>
 
-  <!-- Unterarm: 66mm, Ellenbogen bis Handgelenk -->
+  <!-- Unterarm: 65mm, Ellenbogen bis Handgelenk -->
   <link name="forearm_link">
     <visual>
-      <geometry><box size="0.02 0.04 0.066"/></geometry>
-      <origin xyz="0 0 0.033"/>
+      <geometry><box size="0.02 0.04 0.065"/></geometry>
+      <origin xyz="0 0 0.0325"/>
       <material name="blue"/>
     </visual>
     <collision>
-      <geometry><box size="0.02 0.04 0.066"/></geometry>
-      <origin xyz="0 0 0.033"/>
+      <geometry><box size="0.02 0.04 0.065"/></geometry>
+      <origin xyz="0 0 0.0325"/>
     </collision>
   </link>
 
@@ -92,29 +92,29 @@
   <joint name="joint_3" type="revolute">
     <parent link="forearm_link"/>
     <child link="wrist_link"/>
-    <origin xyz="0 0 0.066" rpy="0 -1.5708 0"/>
+    <origin xyz="0 0 0.065" rpy="0 -1.5708 0"/>
     <axis xyz="0 1 0"/>
     <limit lower="0" upper="3.14160" effort="10" velocity="1.0"/>
   </joint>
 
-  <!-- Handgelenk: 72mm -->
+  <!-- Handgelenk: 70mm -->
   <link name="wrist_link">
     <visual>
-      <geometry><box size="0.04 0.02 0.072"/></geometry>
-      <origin xyz="0 0 0.036"/>
+      <geometry><box size="0.04 0.02 0.070"/></geometry>
+      <origin xyz="0 0 0.035"/>
       <material name="yellow"/>
     </visual>
     <collision>
-      <geometry><box size="0.04 0.02 0.072"/></geometry>
-      <origin xyz="0 0 0.036"/>
+      <geometry><box size="0.04 0.02 0.070"/></geometry>
+      <origin xyz="0 0 0.035"/>
     </collision>
   </link>
 
-  <!-- Servo 4: Handgelenk-Rotation (dreht um Längsachse), am Ende von wrist_link (72mm) -->
+  <!-- Servo 4: Handgelenk-Rotation (dreht um Längsachse), am Ende von wrist_link (70mm) -->
   <joint name="joint_4" type="revolute">
     <parent link="wrist_link"/>
     <child link="gripper_base_link"/>
-    <origin xyz="0 0 0.072" rpy="0 0 0"/>
+    <origin xyz="0 0 0.070" rpy="0 0 0"/>
     <axis xyz="0 0 1"/>
     <limit lower="0" upper="3.14160" effort="10" velocity="1.0"/>
   </joint>
@@ -145,11 +145,11 @@
   <!-- Red ball on the gripper housing (primary data point).
        Measured to ball centre with caliper:
          5 cm along gripper axis (z) from joint_4 rotation point,
-         2 cm outward from axis (y). Ball radius 9 mm. -->
+         3 cm outward from axis (y). Ball radius 9 mm. -->
   <joint name="joint_marker_grasp" type="fixed">
     <parent link="gripper_base_link"/>
     <child link="marker_grasp"/>
-    <origin xyz="0 0.03 0.05" rpy="0 0 0"/>
+    <origin xyz="0 0.034 0.05" rpy="0 0 0"/>
   </joint>
   <link name="marker_grasp">
     <visual>
@@ -160,13 +160,13 @@
 
   <!-- Yellow ball on the wrist.
        Physically attached to wrist_link (not forearm_link).
-       PLACEHOLDER — measure from joint_3 (wrist_link origin) with caliper:
-         z = distance along wrist axis from joint_3
-         x = outward offset (verified: -x direction) -->
+       Measured from joint_3 (wrist_link origin) with caliper:
+         z = 4.9 cm along wrist axis from joint_3
+         x = 2.2 cm outward offset (negative x direction) -->
   <joint name="joint_marker_forearm" type="fixed">
     <parent link="wrist_link"/>
     <child link="marker_forearm"/>
-    <origin xyz="-0.02 0 0.05" rpy="0 0 0"/>
+    <origin xyz="-0.022 0 0.049" rpy="0 0 0"/>
   </joint>
   <link name="marker_forearm">
     <visual>
@@ -177,13 +177,13 @@
 
   <!-- Blue ball on the base plate (static anchor).
        Measured to ball centre with caliper:
-         6.5 cm forward, 9.5 cm left, 1.5 cm up.
-       base_link frame: +X=right, +Y=forward, +Z=up (verified in RViz).
+         6.5 cm forward, 9.8 cm left, 1.6 cm up.
+       base_link frame: +X=right, +Y=forward, +Z=up.
        Therefore: forward=+Y, left=-X. -->
   <joint name="joint_marker_base" type="fixed">
     <parent link="base_link"/>
     <child link="marker_base"/>
-    <origin xyz="-0.095 0.065 0.015" rpy="0 0 0"/>
+    <origin xyz="-0.098 0.065 0.016" rpy="0 0 0"/>
   </joint>
   <link name="marker_base">
     <visual>
@@ -260,11 +260,11 @@
        pitch = pi - atan(17/34) = pi - atan(0.5) ≈ 2.678 rad, yaw/roll = 0.
        Named "..._nominal" to avoid TF conflict with autocalib_node,
        which publishes "overview_camera_link" after each solve. -->
-  <joint name="joint_overview_camera" type="fixed">
+  <joint name="joint_overview_camera_nominal" type="fixed">
     <parent link="base_link"/>
-    <child link="overview_camera_link"/>
+    <child link="overview_camera_nominal"/>
     <origin xyz="-0.16 0.17 0.34" rpy="-2.678 0 -1.5708"/>
   </joint>
-  <link name="overview_camera_link"/>
+  <link name="overview_camera_nominal"/>
 
 </robot>
