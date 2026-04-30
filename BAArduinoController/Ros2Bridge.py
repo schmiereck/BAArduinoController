@@ -93,11 +93,13 @@ class Ros2Bridge(Node):
         for jn in active_joints:
             ri = name_to_ros_idx[jn]
             ci = all_joints.index(jn)
+            mid = (f'pt[1]={points[1].positions[ri]*57.2958:.1f}° '
+                   f'pt[-2]={points[-2].positions[ri]*57.2958:.1f}° '
+                   if len(points) > 1 else '')
             self.get_logger().info(
                 f'  {jn}: current={self._current_positions[ci]*57.2958:.1f}° '
                 f'pt[0]={p0.positions[ri]*57.2958:.1f}° '
-                f'pt[1]={points[1].positions[ri]*57.2958:.1f}° '
-                f'pt[-2]={points[-2].positions[ri]*57.2958:.1f}° '
+                + mid +
                 f'pt[-1]={pN.positions[ri]*57.2958:.1f}°')
 
         # --- Phase 1: Alle Punkte an den Arduino senden ---
